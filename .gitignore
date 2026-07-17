@@ -1,0 +1,26 @@
+# Dependencies
+*.pyc
+__pycache__/
+.venv/
+*.egg-info/
+
+# Agent state (session persistence — local only)
+.agent_state/
+.agent_artifacts/
+
+# Downloaded files
+*.pdf
+*.csv
+!50_Templates/*.csv
+
+# API keys and secrets
+.env
+*.key
+*.secret
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Notion sync cache
+.notion-sync/
