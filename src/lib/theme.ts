@@ -7,7 +7,7 @@ export const theme = {
   textLight: "var(--theme-text-light)",
   border: "var(--theme-border)",
   borderLight: "var(--theme-border-light)",
-  accent: "#3b6044",
+  accent: "#91AC9A",
 };
 
 // Color conversion utilities

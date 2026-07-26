@@ -11,6 +11,7 @@
 
 | Directory | Purpose |
 |-----------|---------|
+| `IP/` (Notebook) | All IP-related content (videos, articles, audio) should be saved here. Automatically generate tags for clear categorization and structuring. |
 | `10_Inbox/` | Raw topic evaluation cards and incoming notes |
 | `20_Knowledge_Atlas/` | Deep research reports (三账本结构) |
 | `30_Scripts_Archive/` | Finalized video scripts |

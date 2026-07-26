@@ -20,15 +20,15 @@
 
 /* Dark mode - applied via .dark class on <html> */
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #000000;
+  --foreground: #E0E6E3;
 
-  --theme-bg: #0a0a0a;
-  --theme-text: #f5f5f5;
-  --theme-text-muted: #a1a1aa;
+  --theme-bg: #000000;
+  --theme-text: #E0E6E3;
+  --theme-text-muted: #A0A0A0;
   --theme-text-light: #71717a;
-  --theme-border: #27272a;
-  --theme-border-light: #1f1f1f;
+  --theme-border: rgba(160, 160, 160, 0.2);
+  --theme-border-light: rgba(160, 160, 160, 0.1);
 }
 
 /* Custom scrollbar for dark mode */

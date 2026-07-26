@@ -223,7 +223,7 @@ export const EntryView = React.memo(function EntryView({
     <div ref={containerRef} className="flex items-stretch">
       {/* Content Area */}
       <div className="flex-1 min-w-0 h-[calc(100vh-100px)] sticky top-0 pr-2">
-        <div className="bg-white dark:bg-zinc-900 border rounded-xl pt-6 pl-6 pb-6 h-full flex flex-col min-w-0 overflow-hidden" style={{ borderColor: theme.border }}>
+        <div className="bg-white dark:bg-neutral-950 border rounded-xl pt-6 pl-6 pb-6 h-full flex flex-col min-w-0 overflow-hidden" style={{ borderColor: theme.border }}>
           {/* Header */}
           <div className="flex items-start justify-between mb-2 pr-6" data-entry-header>
             {isEditing ? (

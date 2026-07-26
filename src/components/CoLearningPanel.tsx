@@ -831,7 +831,7 @@ export function CoLearningPanel({
 
   return (
     <div
-      className="border-l border-zinc-200 dark:border-zinc-700 flex flex-col h-full bg-white dark:bg-zinc-900"
+      className="border-l border-zinc-200 dark:border-zinc-700 flex flex-col h-full bg-white dark:bg-neutral-950"
       style={{ width, borderColor: theme.border }}
     >
       {/* Header */}

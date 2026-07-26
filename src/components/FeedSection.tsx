@@ -909,7 +909,7 @@ function FeedCard({
   return (
     <div
       id={`feed-item-${index}`}
-      className="rounded-xl border bg-white dark:bg-zinc-900 overflow-hidden transition-all hover:shadow-md group"
+      className="rounded-xl border bg-white dark:bg-neutral-950 overflow-hidden transition-all hover:shadow-md group"
       style={{
         borderColor: theme.border,
         ["--tw-ring-color" as string]: accentColor,

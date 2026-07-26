@@ -43,7 +43,7 @@ const themeScript = `
 (function() {
   try {
     const stored = localStorage.getItem('theme-mode');
-    const theme = stored || 'light';
+    const theme = stored || 'dark';
     const isDark = theme === 'dark' ||
       (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     if (isDark) document.documentElement.classList.add('dark');

@@ -21,9 +21,9 @@ function applyTheme(mode: ThemeMode) {
 
 export function useSettings() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [accentColor, setAccentColor] = useState("#3b6044");
+  const [accentColor, setAccentColor] = useState("#91AC9A");
   const [fontFamily, setFontFamily] = useState("outfit");
-  const [themeMode, setThemeModeState] = useState<ThemeMode>("light");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("dark");
   const [rootPath, setRootPath] = useState("");
   const [rootPathSource, setRootPathSource] = useState<"env" | "local" | "default">("default");
   const [rootPathLocked, setRootPathLocked] = useState(false);

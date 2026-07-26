@@ -64,6 +64,8 @@ Every source gets a quick assessment:
 │   │       └── error.txt       # Only present if processing failed
 │   └── {id}/                   # Sources can also be at top level
 ├── .index/                     # Global indices (claims, graph)
+├── notebook/                   # Synthesized documents and generated content
+│   └── IP/                     # (NEW) All IP-related content goes here. Agents MUST automatically generate tags/subfolders for clear categorization.
 └── .cache/
 ```
 

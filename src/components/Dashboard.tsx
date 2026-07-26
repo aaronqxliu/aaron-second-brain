@@ -14,6 +14,7 @@ import {
   Bookmark,
   Flame,
   Puzzle,
+  Trash2,
 } from "lucide-react";
 import { SourceSummary, ACTION_CONFIG, FeedItem, ProcessingStage } from "@/lib/types";
 import { Logo, PDFIcon } from "@/components/Icons";
@@ -52,6 +53,7 @@ export interface DashboardProps {
   feed?: FeedProps;
   onStarterPack?: () => void;
   extensionPath?: string;
+  onDelete?: (id: string) => void;
 }
 
 export const Dashboard = React.memo(function Dashboard({
@@ -69,6 +71,7 @@ export const Dashboard = React.memo(function Dashboard({
   feed,
   onStarterPack,
   extensionPath,
+  onDelete,
 }: DashboardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [stagedFile, setStagedFile] = useState<{ file: File; preview: string | null; isImage: boolean } | null>(null);
@@ -136,7 +139,7 @@ export const Dashboard = React.memo(function Dashboard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`rounded-xl border bg-white dark:bg-zinc-900 shadow-sm transition-all ${
+        className={`rounded-xl border bg-white dark:bg-neutral-950 shadow-sm transition-all ${
           isDragging ? "border-dashed border-2" : ""
         }`}
         style={{
@@ -510,14 +513,30 @@ export const Dashboard = React.memo(function Dashboard({
     ) : null;
 
     return (
-      <button
+      <div
         key={source.meta.id}
         onClick={() => !isExtracting && onSelect(source.meta.id)}
-        className={`p-4 min-h-[160px] border rounded-xl transition-all text-left overflow-hidden bg-white dark:bg-zinc-900 flex flex-col ${isExtracting ? "opacity-70" : "hover:shadow-md"}`}
+        className={`group relative p-4 min-h-[160px] border rounded-xl transition-all text-left overflow-hidden bg-white dark:bg-neutral-950 flex flex-col cursor-pointer ${isExtracting ? "opacity-70 pointer-events-none" : "hover:shadow-md"}`}
         data-track="source.card_select"
         style={{ borderColor: theme.border }}
-        disabled={isExtracting}
       >
+        {/* Delete button - visible on hover */}
+        {onDelete && !isExtracting && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm("Delete this source?")) {
+                onDelete(source.meta.id);
+              }
+            }}
+            className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-950"
+            title="Delete source"
+            data-track="source.card_delete"
+          >
+            <XIcon className="w-4 h-4" style={{ color: "#ef4444" }} />
+          </button>
+        )}
+
         {/* Source marker + status */}
         <div className="flex items-center justify-between gap-3 mb-3 min-w-0">
           {isExtracting ? (
@@ -552,7 +571,7 @@ export const Dashboard = React.memo(function Dashboard({
             {source.reason}
           </p>
         )}
-      </button>
+      </div>
     );
   };
 

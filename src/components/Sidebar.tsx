@@ -9,6 +9,7 @@ import {
   Clock,
   FileText,
   Brain,
+  Radar,
 } from "lucide-react";
 import { Source, TreeNode } from "@/lib/types";
 import { theme } from "@/lib/theme";
@@ -68,10 +69,11 @@ export interface SidebarProps {
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
   selectedSource: Source | null;
-  currentView: "dashboard" | "foryou" | "history";
+  currentView: "dashboard" | "foryou" | "history" | "radar";
   onNavigateToDashboard: () => void;
   onNavigateToForYou: () => void;
   onNavigateToHistory: () => void;
+  onNavigateToRadar: () => void;
   // Sections (Library, Notebook, etc.)
   sections: SectionConfig[];
   // Profile documents
@@ -93,6 +95,7 @@ export const Sidebar = React.memo(function Sidebar({
   onNavigateToDashboard,
   onNavigateToForYou,
   onNavigateToHistory,
+  onNavigateToRadar,
   selectedProfile,
   onSelectProfile,
   sections,
@@ -187,6 +190,27 @@ export const Sidebar = React.memo(function Sidebar({
               style={{ color: !selectedSource && !selectedProfile && currentView === "history" ? palette[600] : theme.text }}
             >
               History
+            </span>
+          </button>
+
+          {/* Radar Entry */}
+          <button
+            onClick={onNavigateToRadar}
+            className="mx-2 mt-1 px-3 py-2 flex items-center gap-2 hover:bg-black/5 transition-colors text-left rounded-lg"
+            data-track="nav.radar"
+            style={{
+              backgroundColor: !selectedSource && !selectedProfile && currentView === "radar" ? `${palette[500]}15` : undefined,
+            }}
+          >
+            <Radar
+              className="w-4 h-4"
+              style={{ color: !selectedSource && !selectedProfile && currentView === "radar" ? palette[500] : theme.textMuted }}
+            />
+            <span
+              className="text-sm font-medium"
+              style={{ color: !selectedSource && !selectedProfile && currentView === "radar" ? palette[600] : theme.text }}
+            >
+              IP Radar
             </span>
           </button>
 

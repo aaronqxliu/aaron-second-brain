@@ -9,6 +9,7 @@ import { EntryView } from "@/components/EntryView";
 import { Dashboard } from "@/components/Dashboard";
 import { FeedSection } from "@/components/FeedSection";
 import { HistorySection } from "@/components/HistorySection";
+import { RadarSection } from "@/components/RadarSection";
 import { Header } from "@/components/Header";
 import { SettingsModal } from "@/components/SettingsModal";
 import { AgentModeGate } from "@/components/AgentModeGate";
@@ -84,11 +85,11 @@ function HomeContent() {
   });
 
   // Derive currentView from URL
-  const currentView: "dashboard" | "foryou" | "history" =
-    viewParam === "foryou" ? "foryou" : viewParam === "history" ? "history" : "dashboard";
+  const currentView: "dashboard" | "foryou" | "history" | "radar" =
+    viewParam === "foryou" ? "foryou" : viewParam === "history" ? "history" : viewParam === "radar" ? "radar" : "dashboard";
 
   // Navigation helpers
-  const navigateToView = (view: "dashboard" | "foryou" | "history") => {
+  const navigateToView = (view: "dashboard" | "foryou" | "history" | "radar") => {
     if (view === "dashboard") {
       router.push("/");
     } else {
@@ -533,6 +534,7 @@ function HomeContent() {
           onNavigateToDashboard={() => { setProfileDoc(null); navigateToDashboard(); navigateToView("dashboard"); }}
           onNavigateToForYou={() => { setProfileDoc(null); navigateToDashboard(); navigateToView("foryou"); }}
           onNavigateToHistory={() => { setProfileDoc(null); navigateToDashboard(); navigateToView("history"); }}
+          onNavigateToRadar={() => { setProfileDoc(null); navigateToDashboard(); navigateToView("radar"); }}
           selectedProfile={profileParam}
           onSelectProfile={navigateToProfile}
           onEntryContextMenu={handleEntryContextMenu}
@@ -728,6 +730,10 @@ function HomeContent() {
                   theme={theme}
                 />
               </div>
+            ) : currentView === "radar" ? (
+              <div className="max-w-4xl mx-auto h-full">
+                <RadarSection palette={palette} onSelectDocument={navigateToDocument} />
+              </div>
             ) : currentView === "foryou" ? (
               <div className="max-w-3xl mx-auto">
                 <FeedSection
@@ -778,6 +784,7 @@ function HomeContent() {
                 getScoreColor={getScoreColor}
                 onStarterPack={captureStarterPack}
                 extensionPath={extensionPath}
+                onDelete={handleDeleteSource}
               />
             )}
           </div>
