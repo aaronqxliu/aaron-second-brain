@@ -24,3 +24,14 @@ Thumbs.db
 
 # Notion sync cache
 .notion-sync/
+
+# Node & Next.js build outputs
+node_modules/
+.next/
+out/
+build/
+
+# Local user data and scratch
+user_data/
+scratch/
+.claude/

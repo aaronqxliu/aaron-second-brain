@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aaron Second Brain</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✒️</text></svg>">
+</head>
+<body>
+    <div id="app">
+        <!-- ───── Header ───── -->
+        <header id="app-header">
+            <div class="header-brand">
+                <div class="brand-text">
+                    <h1>Aaron's Second Brain</h1>
+                    <span class="brand-subtitle">Silicon Valley Engine Room</span>
+                </div>
+            </div>
+            <nav class="header-tabs" id="main-tabs">
+                <button class="tab-btn active" data-tab="knowledge" id="tab-knowledge">
+                    <span class="tab-icon">📚</span>
+                    <span class="tab-label">Knowledge Base</span>
+                </button>
+                <button class="tab-btn" data-tab="topics" id="tab-topics">
+                    <span class="tab-icon">✨</span>
+                    <span class="tab-label">Research Pipeline</span>
+                    <span class="tab-badge" id="topics-count"></span>
+                </button>
+            </nav>
+            <div class="header-spacer"></div>
+        </header>
+
+        <!-- ───── Tab 1: Knowledge Base ───── -->
+        <main class="tab-content active" id="content-knowledge">
+            <div class="kb-layout">
+                <!-- Sidebar -->
+                <aside class="kb-sidebar" id="kb-sidebar">
+                    <div class="sidebar-search">
+                        <div class="search-input-wrapper">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="kb-search" placeholder="Search notes..." autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="file-tree" id="file-tree">
+                        <div class="loading-skeleton">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line"></div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Resize handle -->
+                <div class="resize-handle" id="resize-handle"></div>
+
+                <!-- Viewer -->
+                <section class="kb-viewer" id="kb-viewer">
+                    <div class="viewer-empty" id="viewer-empty">
+                        <div class="empty-illustration">
+                            <span class="empty-icon-large">✍️</span>
+                        </div>
+                        <h3>Pick a note to read</h3>
+                        <p class="hand-text">Explore the knowledge base on the left...</p>
+                    </div>
+                    <div class="viewer-content hidden" id="viewer-content">
+                        <div class="viewer-header">
+                            <div class="viewer-breadcrumb" id="viewer-breadcrumb"></div>
+                            <div class="viewer-meta" id="viewer-meta"></div>
+                        </div>
+                        <article class="markdown-body" id="markdown-body"></article>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- ───── Tab 2: Topic Research ───── -->
+        <main class="tab-content" id="content-topics">
+            <div class="topics-layout">
+                <div class="topics-header">
+                    <div class="topics-title-row">
+                        <h2 class="topics-title">Research Pipeline</h2>
+                        <div class="topics-stats" id="topics-stats"></div>
+                    </div>
+                    <div class="topics-search">
+                        <div class="search-input-wrapper">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="topics-search" placeholder="Filter topics..." autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+                <div class="topics-list" id="topics-list">
+                    <div class="loading-skeleton">
+                        <div class="skeleton-card"></div>
+                        <div class="skeleton-card"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ───── Search Results Overlay ───── -->
+        <div class="search-overlay hidden" id="search-overlay">
+            <div class="search-overlay-backdrop" id="search-backdrop"></div>
+            <div class="search-results-panel">
+                <div class="search-results-header">
+                    <h3>Search Results</h3>
+                    <button class="close-btn" id="close-search">&times;</button>
+                </div>
+                <div class="search-results-body" id="search-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>

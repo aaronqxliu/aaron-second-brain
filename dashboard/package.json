@@ -1,0 +1,14 @@
+{
+  "name": "aaron-second-brain-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dashboard UI for Aaron Second Brain — 硅谷引擎舱 content pipeline",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
