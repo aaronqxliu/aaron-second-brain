@@ -9,6 +9,7 @@ export const FEED_CONFIG = {
   cacheHours: 6,           // How long to cache feed results
   maxInterests: 5,         // Max search topics to extract from library
   maxFeedItems: 30,        // Max items to show in feed (from ~50 search results)
+  maxItemsPerFeed: 12,     // Newest items taken per RSS feed — see fetchRSS
 };
 
 // Bounds on how much history is packed into agent prompts. Without these,
@@ -25,13 +26,60 @@ export const API_CONFIG = {
   braveResultsPerQuery: 10, // Results per search query
 };
 
+// Curated frontier-AI starting set, grouped by domain. Every URL here was
+// fetched and confirmed to parse before being added — a feed that 404s or
+// serves a format the parser misses fails silently and just yields nothing.
 export const DEFAULT_RSS_FEEDS: RssFeedSource[] = [
-  { url: "https://hnrss.org/frontpage", label: "Hacker News" },
-  { url: "https://www.reddit.com/r/singularity/.rss", label: "R/singularity" },
-  { url: "https://www.reddit.com/r/ClaudeAI/.rss", label: "R/ClaudeAI" },
+  // AI infrastructure — chips, storage, optical networking, power
+  { url: "https://www.nextplatform.com/feed/", label: "The Next Platform" },
+  { url: "https://spectrum.ieee.org/feeds/topic/semiconductors.rss", label: "IEEE Spectrum · Semiconductors" },
+  { url: "https://spectrum.ieee.org/feeds/topic/energy.rss", label: "IEEE Spectrum · Energy" },
+  { url: "https://www.datacenterdynamics.com/rss/", label: "Data Center Dynamics" },
+  { url: "https://www.servethehome.com/feed/", label: "ServeTheHome" },
+  { url: "https://developer.nvidia.com/blog/feed/", label: "NVIDIA Technical Blog" },
+  { url: "https://blog.cloudflare.com/rss/", label: "Cloudflare Blog" },
+
+  // AI for science + life science
+  { url: "http://feeds.nature.com/nature/rss/current", label: "Nature" },
+  { url: "https://www.nature.com/natmachintell.rss", label: "Nature Machine Intelligence" },
+  { url: "https://www.nature.com/nbt.rss", label: "Nature Biotechnology" },
+  { url: "https://www.science.org/rss/news_current.xml", label: "Science" },
+  { url: "http://connect.biorxiv.org/biorxiv_xml.php?subject=all", label: "bioRxiv" },
+  { url: "https://rss.arxiv.org/rss/cs.AI", label: "arXiv cs.AI" },
+  { url: "https://www.statnews.com/feed/", label: "STAT News" },
+
+  // Physical AI — robotics, autonomy
+  { url: "https://spectrum.ieee.org/feeds/topic/robotics.rss", label: "IEEE Spectrum · Robotics" },
+  { url: "https://www.therobotreport.com/feed/", label: "The Robot Report" },
+  { url: "https://waymo.com/blog/rss.xml", label: "Waymo Blog" },
+
+  // Web3
+  { url: "https://www.theblock.co/rss.xml", label: "The Block" },
+  { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", label: "CoinDesk" },
+  { url: "https://decrypt.co/feed", label: "Decrypt" },
+
+  // Company engineering + research blogs
+  { url: "https://openai.com/news/rss.xml", label: "OpenAI" },
+  { url: "https://deepmind.google/blog/rss.xml", label: "Google DeepMind" },
+  { url: "https://research.google/blog/rss/", label: "Google Research" },
+  { url: "https://www.microsoft.com/en-us/research/feed/", label: "Microsoft Research" },
+  { url: "https://aws.amazon.com/blogs/machine-learning/feed/", label: "AWS Machine Learning" },
+  { url: "https://huggingface.co/blog/feed.xml", label: "Hugging Face" },
+  { url: "https://engineering.fb.com/feed/", label: "Meta Engineering" },
+
+  // News and analysis
+  { url: "https://feeds.arstechnica.com/arstechnica/index", label: "Ars Technica" },
+  { url: "https://www.technologyreview.com/feed/", label: "MIT Technology Review" },
+  { url: "https://feeds.bloomberg.com/technology/news.rss", label: "Bloomberg Technology" },
+  { url: "https://techcrunch.com/category/artificial-intelligence/feed/", label: "TechCrunch AI" },
+  { url: "https://importai.substack.com/feed", label: "Import AI" },
+  { url: "https://www.latent.space/feed", label: "Latent Space" },
+  { url: "https://news.ycombinator.com/rss", label: "Hacker News" },
 ];
 
-export const DEFAULT_SEARCH_SOURCES = ["reddit.com"];
+// Kept short on purpose: search runs every interest against every domain, so
+// each entry here multiplies Brave API calls per feed refresh.
+export const DEFAULT_SEARCH_SOURCES = ["semianalysis.com", "stratechery.com", "morganstanley.com"];
 
 // First-run starter pack: curated public reads a new user can capture with
 // one click. Only titles and URLs ship here — each user's agent fetches and
@@ -47,13 +95,18 @@ export const STARTER_PACK: { title: string; url: string }[] = [
 // five analysis pipelines at once.
 export const STARTER_PACK_STAGGER_SECONDS = 15;
 
+// Sources worth searching rather than subscribing to: either they publish no
+// usable feed (institutional research) or their feed has gone stale behind a
+// paywall while the site itself keeps updating.
 export const SUGGESTED_SEARCH_SOURCES = [
+  { domain: "semianalysis.com", label: "SemiAnalysis" },
+  { domain: "stratechery.com", label: "Stratechery" },
+  { domain: "morganstanley.com", label: "Morgan Stanley" },
+  { domain: "goldmansachs.com", label: "Goldman Sachs" },
+  { domain: "mckinsey.com", label: "McKinsey" },
+  { domain: "a16z.com", label: "a16z" },
+  { domain: "epoch.ai", label: "Epoch AI" },
   { domain: "reddit.com", label: "Reddit" },
-  { domain: "arstechnica.com", label: "Ars Technica" },
-  { domain: "theverge.com", label: "The Verge" },
-  { domain: "wired.com", label: "Wired" },
-  { domain: "techcrunch.com", label: "TechCrunch" },
-  { domain: "nytimes.com", label: "New York Times" },
   { domain: "bloomberg.com", label: "Bloomberg" },
-  { domain: "theguardian.com", label: "The Guardian" },
+  { domain: "wired.com", label: "Wired" },
 ];

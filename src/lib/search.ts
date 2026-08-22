@@ -3,7 +3,7 @@ import { debugLog } from "./log";
  * Brave Search API integration for Feed feature
  */
 
-import { API_CONFIG } from "./config";
+import { API_CONFIG, FEED_CONFIG } from "./config";
 import type { RssFeedSource } from "./storage";
 
 export interface BraveSearchResult {
@@ -28,21 +28,21 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Extract text from an XML tag, handling CDATA and plain text.
+ * Extract text from an XML tag, handling attributes, CDATA and plain text.
  */
 function xmlText(xml: string, tag: string): string {
-  return xml.match(new RegExp(`<${tag}>[<!\\[CDATA\\[]*([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`))?.[1]
-    || xml.match(new RegExp(`<${tag}><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>`))?.[1]
-    || xml.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1]
-    || "";
+  const raw = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`))?.[1] ?? "";
+  return raw.replace(/^\s*<!\[CDATA\[/, "").replace(/\]\]>\s*$/, "").trim();
 }
 
 /**
- * Parse RSS 2.0 items from XML
+ * Parse RSS 2.0 <item> and RSS 1.0/RDF <item rdf:about="..."> entries.
+ * Nature, Science and bioRxiv all publish RDF, which carries its body in
+ * <content:encoded> and its date in <dc:date> rather than the RSS 2.0 tags.
  */
 function parseRssItems(xml: string): { title: string; url: string; description: string; pubDate: string }[] {
   const items: { title: string; url: string; description: string; pubDate: string }[] = [];
-  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  const itemRegex = /<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/g;
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
     const item = match[1];
@@ -51,8 +51,8 @@ function parseRssItems(xml: string): { title: string; url: string; description: 
     items.push({
       title: xmlText(item, "title"),
       url: comments || link,  // Prefer <comments> (e.g. HN discussion)
-      description: xmlText(item, "description"),
-      pubDate: xmlText(item, "pubDate"),
+      description: xmlText(item, "description") || xmlText(item, "content:encoded"),
+      pubDate: xmlText(item, "pubDate") || xmlText(item, "dc:date"),
     });
   }
   return items;
@@ -80,8 +80,10 @@ function parseAtomEntries(xml: string): { title: string; url: string; descriptio
 }
 
 /**
- * Fetch any RSS/Atom feed and return results.
- * Handles both RSS 2.0 (<item>) and Atom (<entry>) formats.
+ * Fetch any RSS/Atom feed and return its newest items.
+ * Handles RSS 2.0 (<item>), RSS 1.0/RDF (<item rdf:about>) and Atom (<entry>).
+ * Capped per feed: archive-style feeds publish hundreds of entries, and every
+ * item costs a slot in the parallel LLM filter batches downstream.
  * 10s timeout to avoid blocking on slow feeds.
  */
 async function fetchRSS(feedUrl: string, label: string): Promise<BraveSearchResult[]> {
@@ -106,11 +108,12 @@ async function fetchRSS(feedUrl: string, label: string): Promise<BraveSearchResu
     const xml = await response.text();
     const hostname = new URL(feedUrl).hostname;
 
-    // Try RSS 2.0 first, fall back to Atom
+    // Try RSS 2.0 / RDF first, fall back to Atom
     let parsed = parseRssItems(xml);
     if (parsed.length === 0) {
       parsed = parseAtomEntries(xml);
     }
+    parsed = parsed.slice(0, FEED_CONFIG.maxItemsPerFeed);
 
     const results: BraveSearchResult[] = [];
     for (const item of parsed) {

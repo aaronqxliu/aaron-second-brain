@@ -35,3 +35,6 @@ build/
 user_data/
 scratch/
 .claude/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

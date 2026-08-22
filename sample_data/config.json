@@ -13,7 +13,7 @@
   "headingStyle": "colored",
   "rssFeeds": [
     {
-      "url": "https://hnrss.org/frontpage",
+      "url": "https://news.ycombinator.com/rss",
       "label": "Hacker News"
     },
     {

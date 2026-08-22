@@ -9,6 +9,7 @@ import {
   loadUserConfig,
 } from "@/lib/storage";
 import { GET as getProfile } from "@/app/api/profile/[name]/route";
+import { DEFAULT_RSS_FEEDS } from "@/lib/config";
 
 const ORIGINAL_ENV = { ...process.env };
 let tmpRoot: string;
@@ -113,7 +114,7 @@ describe("sample data seeding", () => {
     const config = await loadUserConfig();
     const savedConfig = JSON.parse(await fs.readFile(path.join(tmpRoot, "config.json"), "utf-8"));
 
-    expect(config.rssFeeds?.map(feed => feed.label)).toEqual(["Hacker News", "R/singularity", "R/ClaudeAI"]);
+    expect(config.rssFeeds).toEqual(DEFAULT_RSS_FEEDS);
     expect(config.searchSources).toEqual(["example.com"]);
     expect(savedConfig.feedSources).toBeUndefined();
   });
