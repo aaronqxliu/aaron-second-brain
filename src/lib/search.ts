@@ -27,6 +27,13 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+interface FeedEntry {
+  title: string;
+  url: string;
+  description: string;
+  pubDate: string;
+}
+
 /**
  * Extract text from an XML tag, handling attributes, CDATA and plain text.
  */
@@ -40,17 +47,22 @@ function xmlText(xml: string, tag: string): string {
  * Nature, Science and bioRxiv all publish RDF, which carries its body in
  * <content:encoded> and its date in <dc:date> rather than the RSS 2.0 tags.
  */
-function parseRssItems(xml: string): { title: string; url: string; description: string; pubDate: string }[] {
-  const items: { title: string; url: string; description: string; pubDate: string }[] = [];
+function parseRssItems(xml: string, limit: number): FeedEntry[] {
+  const items: FeedEntry[] = [];
   const itemRegex = /<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/g;
   let match;
-  while ((match = itemRegex.exec(xml)) !== null) {
+  while (items.length < limit && (match = itemRegex.exec(xml)) !== null) {
     const item = match[1];
-    const comments = xmlText(item, "comments");
-    const link = xmlText(item, "link");
+    // Podcast items carry no <link>: the episode lives in <guid> when that is
+    // a URL, and otherwise only the audio <enclosure> identifies it.
+    const guid = xmlText(item, "guid");
     items.push({
       title: xmlText(item, "title"),
-      url: comments || link,  // Prefer <comments> (e.g. HN discussion)
+      url: xmlText(item, "comments")  // Prefer <comments> (e.g. HN discussion)
+        || xmlText(item, "link")
+        || (guid.startsWith("http") ? guid : "")
+        || item.match(/<enclosure[^>]*\surl="([^"]+)"/)?.[1]
+        || "",
       description: xmlText(item, "description") || xmlText(item, "content:encoded"),
       pubDate: xmlText(item, "pubDate") || xmlText(item, "dc:date"),
     });
@@ -61,11 +73,11 @@ function parseRssItems(xml: string): { title: string; url: string; description: 
 /**
  * Parse Atom entries from XML
  */
-function parseAtomEntries(xml: string): { title: string; url: string; description: string; pubDate: string }[] {
-  const items: { title: string; url: string; description: string; pubDate: string }[] = [];
+function parseAtomEntries(xml: string, limit: number): FeedEntry[] {
+  const items: FeedEntry[] = [];
   const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
   let match;
-  while ((match = entryRegex.exec(xml)) !== null) {
+  while (items.length < limit && (match = entryRegex.exec(xml)) !== null) {
     const entry = match[1];
     // Atom uses <link href="..." /> (self-closing with attribute)
     const link = entry.match(/<link[^>]*href="([^"]*)"[^>]*\/?\s*>/)?.[1] || "";
@@ -108,12 +120,23 @@ async function fetchRSS(feedUrl: string, label: string): Promise<BraveSearchResu
     const xml = await response.text();
     const hostname = new URL(feedUrl).hostname;
 
-    // Try RSS 2.0 / RDF first, fall back to Atom
-    let parsed = parseRssItems(xml);
-    if (parsed.length === 0) {
-      parsed = parseAtomEntries(xml);
+    // Some publishers answer a bot check with 200 + an HTML page. Parsing that
+    // yields zero entries and no error, which reads as "this feed is quiet"
+    // rather than "this feed was blocked". Say which one it is.
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("text/html")) {
+      console.warn(`[fetchRSS] ${label} served HTML instead of a feed (likely a bot check): ${feedUrl}`);
+      return [];
     }
-    parsed = parsed.slice(0, FEED_CONFIG.maxItemsPerFeed);
+
+    // Try RSS 2.0 / RDF first, fall back to Atom. Both stop at the cap: a
+    // podcast archive can run to 20MB and there is no reason to parse past
+    // the newest entries.
+    const limit = FEED_CONFIG.maxItemsPerFeed;
+    let parsed = parseRssItems(xml, limit);
+    if (parsed.length === 0) {
+      parsed = parseAtomEntries(xml, limit);
+    }
 
     const results: BraveSearchResult[] = [];
     for (const item of parsed) {

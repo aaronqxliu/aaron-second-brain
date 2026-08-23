@@ -9,7 +9,7 @@ export const FEED_CONFIG = {
   cacheHours: 6,           // How long to cache feed results
   maxInterests: 5,         // Max search topics to extract from library
   maxFeedItems: 30,        // Max items to show in feed (from ~50 search results)
-  maxItemsPerFeed: 12,     // Newest items taken per RSS feed — see fetchRSS
+  maxItemsPerFeed: 8,     // Newest items taken per RSS feed — see fetchRSS
 };
 
 // Bounds on how much history is packed into agent prompts. Without these,
@@ -30,8 +30,11 @@ export const API_CONFIG = {
 // fetched and confirmed to parse before being added — a feed that 404s or
 // serves a format the parser misses fails silently and just yields nothing.
 export const DEFAULT_RSS_FEEDS: RssFeedSource[] = [
-  // AI infrastructure — chips, storage, optical networking, power
+  // ── AI infrastructure: chips, storage, optical, power ──
   { url: "https://www.nextplatform.com/feed/", label: "The Next Platform" },
+  { url: "https://semiengineering.com/feed/", label: "Semiconductor Engineering" },
+  { url: "https://www.trendforce.com/feed/Semiconductors.html", label: "TrendForce · Semiconductors" },
+  { url: "https://www.trendforce.com/feed/Energy.html", label: "TrendForce · Energy" },
   { url: "https://spectrum.ieee.org/feeds/topic/semiconductors.rss", label: "IEEE Spectrum · Semiconductors" },
   { url: "https://spectrum.ieee.org/feeds/topic/energy.rss", label: "IEEE Spectrum · Energy" },
   { url: "https://www.datacenterdynamics.com/rss/", label: "Data Center Dynamics" },
@@ -39,26 +42,65 @@ export const DEFAULT_RSS_FEEDS: RssFeedSource[] = [
   { url: "https://developer.nvidia.com/blog/feed/", label: "NVIDIA Technical Blog" },
   { url: "https://blog.cloudflare.com/rss/", label: "Cloudflare Blog" },
 
-  // AI for science + life science
-  { url: "http://feeds.nature.com/nature/rss/current", label: "Nature" },
-  { url: "https://www.nature.com/natmachintell.rss", label: "Nature Machine Intelligence" },
-  { url: "https://www.nature.com/nbt.rss", label: "Nature Biotechnology" },
-  { url: "https://www.science.org/rss/news_current.xml", label: "Science" },
-  { url: "http://connect.biorxiv.org/biorxiv_xml.php?subject=all", label: "bioRxiv" },
-  { url: "https://rss.arxiv.org/rss/cs.AI", label: "arXiv cs.AI" },
-  { url: "https://www.statnews.com/feed/", label: "STAT News" },
+  // ── Independent analysts ──
+  { url: "https://www.fabricatedknowledge.com/feed", label: "Fabricated Knowledge" },
+  { url: "https://thechipletter.substack.com/feed", label: "The Chip Letter" },
+  { url: "https://d2d.substack.com/feed", label: "Digits to Dollars" },
+  { url: "https://www.chinatalk.media/feed", label: "ChinaTalk" },
+  { url: "https://magazine.sebastianraschka.com/feed", label: "Ahead of AI" },
+  { url: "https://importai.substack.com/feed", label: "Import AI" },
+  { url: "https://www.latent.space/feed", label: "Latent Space" },
 
-  // Physical AI — robotics, autonomy
+  // ── Institutional research (podcast feeds — the reports themselves are gated) ──
+  { url: "https://rss.art19.com/thoughts-on-the-market", label: "Morgan Stanley · Thoughts on the Market" },
+  { url: "https://feeds.megaphone.fm/GLD9218176758", label: "Goldman Sachs · Exchanges" },
+
+  // ── Journals: AI for science ──
+  { url: "http://feeds.nature.com/nature/rss/current", label: "Nature" },
+  { url: "https://www.science.org/rss/news_current.xml", label: "Science" },
+  { url: "https://www.nature.com/natmachintell.rss", label: "Nature Machine Intelligence" },
+  { url: "https://www.nature.com/natcomputsci.rss", label: "Nature Computational Science" },
+  { url: "https://www.nature.com/nmeth.rss", label: "Nature Methods" },
+  { url: "https://www.pnas.org/action/showFeed?type=etoc&feed=rss&jc=pnas", label: "PNAS" },
+  { url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=sciadv", label: "Science Advances" },
+
+  // ── Journals: life science ──
+  { url: "https://www.nature.com/nbt.rss", label: "Nature Biotechnology" },
+  { url: "https://www.nature.com/nm.rss", label: "Nature Medicine" },
+  { url: "https://www.nature.com/ng.rss", label: "Nature Genetics" },
+  { url: "https://www.nature.com/nrd.rss", label: "Nature Reviews Drug Discovery" },
+  { url: "https://www.cell.com/cell/inpress.rss", label: "Cell" },
+  { url: "http://connect.biorxiv.org/biorxiv_xml.php?subject=all", label: "bioRxiv" },
+  { url: "https://www.statnews.com/feed/", label: "STAT News" },
+  { url: "https://biotechbio.substack.com/feed", label: "Techbio<>Biotech" },
+  { url: "https://scalingbiotech.substack.com/feed", label: "Scaling Biotech" },
+
+  // ── Journals: hardware, photonics, energy ──
+  { url: "https://www.nature.com/natelectron.rss", label: "Nature Electronics" },
+  { url: "https://www.nature.com/nphoton.rss", label: "Nature Photonics" },
+  { url: "https://www.nature.com/nenergy.rss", label: "Nature Energy" },
+  { url: "https://www.nature.com/nnano.rss", label: "Nature Nanotechnology" },
+
+  // ── Physical AI ──
+  { url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=scirobotics", label: "Science Robotics" },
   { url: "https://spectrum.ieee.org/feeds/topic/robotics.rss", label: "IEEE Spectrum · Robotics" },
   { url: "https://www.therobotreport.com/feed/", label: "The Robot Report" },
+  { url: "https://aiproem.substack.com/feed", label: "AI Proem" },
   { url: "https://waymo.com/blog/rss.xml", label: "Waymo Blog" },
 
-  // Web3
-  { url: "https://www.theblock.co/rss.xml", label: "The Block" },
-  { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", label: "CoinDesk" },
-  { url: "https://decrypt.co/feed", label: "Decrypt" },
+  // ── arXiv. Empty at weekends by design: new submissions are announced on
+  //    business days, so a quiet Saturday feed is not a broken one. ──
+  { url: "https://rss.arxiv.org/rss/cs.AI", label: "arXiv cs.AI" },
+  { url: "https://rss.arxiv.org/rss/cs.LG", label: "arXiv cs.LG" },
+  { url: "https://rss.arxiv.org/rss/cs.CL", label: "arXiv cs.CL" },
+  { url: "https://rss.arxiv.org/rss/cs.RO", label: "arXiv cs.RO" },
+  { url: "https://rss.arxiv.org/rss/cs.AR", label: "arXiv cs.AR" },
+  { url: "https://rss.arxiv.org/rss/cs.DC", label: "arXiv cs.DC" },
+  { url: "https://rss.arxiv.org/rss/q-bio.BM", label: "arXiv q-bio.BM" },
+  { url: "https://rss.arxiv.org/rss/physics.optics", label: "arXiv physics.optics" },
+  { url: "https://rss.arxiv.org/rss/cond-mat.mtrl-sci", label: "arXiv cond-mat.mtrl-sci" },
 
-  // Company engineering + research blogs
+  // ── Company engineering and research ──
   { url: "https://openai.com/news/rss.xml", label: "OpenAI" },
   { url: "https://deepmind.google/blog/rss.xml", label: "Google DeepMind" },
   { url: "https://research.google/blog/rss/", label: "Google Research" },
@@ -67,19 +109,20 @@ export const DEFAULT_RSS_FEEDS: RssFeedSource[] = [
   { url: "https://huggingface.co/blog/feed.xml", label: "Hugging Face" },
   { url: "https://engineering.fb.com/feed/", label: "Meta Engineering" },
 
-  // News and analysis
+  // ── News ──
   { url: "https://feeds.arstechnica.com/arstechnica/index", label: "Ars Technica" },
   { url: "https://www.technologyreview.com/feed/", label: "MIT Technology Review" },
   { url: "https://feeds.bloomberg.com/technology/news.rss", label: "Bloomberg Technology" },
   { url: "https://techcrunch.com/category/artificial-intelligence/feed/", label: "TechCrunch AI" },
-  { url: "https://importai.substack.com/feed", label: "Import AI" },
-  { url: "https://www.latent.space/feed", label: "Latent Space" },
   { url: "https://news.ycombinator.com/rss", label: "Hacker News" },
+
+  // ── Web3 (deprioritized: one analytical outlet, not a news bundle) ──
+  { url: "https://www.theblock.co/rss.xml", label: "The Block" },
 ];
 
 // Kept short on purpose: search runs every interest against every domain, so
 // each entry here multiplies Brave API calls per feed refresh.
-export const DEFAULT_SEARCH_SOURCES = ["semianalysis.com", "stratechery.com", "morganstanley.com"];
+export const DEFAULT_SEARCH_SOURCES = ["semianalysis.com", "hai.stanford.edu", "epoch.ai"];
 
 // First-run starter pack: curated public reads a new user can capture with
 // one click. Only titles and URLs ship here — each user's agent fetches and

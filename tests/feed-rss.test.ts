@@ -40,6 +40,22 @@ const ATOM_FEED = `<feed xmlns="http://www.w3.org/2005/Atom">
   </entry>
 </feed>`;
 
+/** Podcast items name no <link>; the episode is the audio enclosure. */
+const PODCAST_FEED = `<rss version="2.0"><channel>
+  <item>
+    <title>Shifts in Credit Markets</title>
+    <guid isPermaLink="false">gid://art19-episode-locator/V0/abc</guid>
+    <enclosure url="https://cdn.example.com/ep/123.mp3" length="1" type="audio/mpeg"/>
+    <description>Our analyst on AI buildout financing.</description>
+    <pubDate>Fri, 21 Aug 2026 20:00:00 -0000</pubDate>
+  </item>
+  <item>
+    <title>An episode with a page</title>
+    <guid isPermaLink="true">https://example.com/episodes/2</guid>
+    <enclosure url="https://cdn.example.com/ep/2.mp3" length="1" type="audio/mpeg"/>
+  </item>
+</channel></rss>`;
+
 function mockFeed(xml: string) {
   vi.stubGlobal("fetch", vi.fn(async () => new Response(xml, { status: 200 })));
 }
@@ -90,5 +106,42 @@ describe("RSS feed parsing", () => {
 
     const { results } = await searchNews([], [], [{ url: "https://example.com/feed", label: "Archive" }]);
     expect(results).toHaveLength(FEED_CONFIG.maxItemsPerFeed);
+  });
+
+  it("keeps podcast episodes, falling back to guid then enclosure for the link", async () => {
+    mockFeed(PODCAST_FEED);
+    const { results } = await searchNews([], [], [{ url: "https://rss.example.com/show", label: "Show" }]);
+
+    expect(results).toHaveLength(2);
+    // No usable guid, so the audio enclosure identifies the episode.
+    expect(results[0].title).toBe("Shifts in Credit Markets");
+    expect(results[0].url).toBe("https://cdn.example.com/ep/123.mp3");
+    // A guid that is a real URL wins over the audio file.
+    expect(results[1].url).toBe("https://example.com/episodes/2");
+  });
+
+  it("stops parsing at the cap instead of walking a whole archive", async () => {
+    const many = Array.from({ length: 500 }, (_, i) =>
+      `<item><title>Post ${i}</title><link>https://example.com/${i}</link></item>`
+    ).join("");
+    mockFeed(`<rss version="2.0"><channel>${many}</channel></rss>`);
+
+    const { results } = await searchNews([], [], [{ url: "https://example.com/feed", label: "Archive" }]);
+    expect(results).toHaveLength(FEED_CONFIG.maxItemsPerFeed);
+    expect(results.at(-1)?.title).toBe(`Post ${FEED_CONFIG.maxItemsPerFeed - 1}`);
+  });
+
+  it("treats an HTML bot-check response as a blocked feed, not an empty one", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      "<!DOCTYPE html><html><body>Verifying you are human</body></html>",
+      { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
+    )));
+
+    const { results } = await searchNews([], [], [{ url: "https://www.nature.com/nmeth.rss", label: "Nature Methods" }]);
+
+    expect(results).toHaveLength(0);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("served HTML instead of a feed"));
+    warn.mockRestore();
   });
 });
