@@ -45,7 +45,6 @@ export const DEFAULT_RSS_FEEDS: RssFeedSource[] = [
 
   // ── Independent analysts ──
   { url: "https://newsletter.semianalysis.com/feed", label: "SemiAnalysis" },
-  { url: "https://www.fabricatedknowledge.com/feed", label: "Fabricated Knowledge" },
   { url: "https://thechipletter.substack.com/feed", label: "The Chip Letter" },
   { url: "https://d2d.substack.com/feed", label: "Digits to Dollars" },
   { url: "https://www.chinatalk.media/feed", label: "ChinaTalk" },
