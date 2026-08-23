@@ -50,36 +50,21 @@ export const DEFAULT_RSS_FEEDS: RssFeedSource[] = [
   { url: "https://magazine.sebastianraschka.com/feed", label: "Ahead of AI" },
   { url: "https://importai.substack.com/feed", label: "Import AI" },
   { url: "https://www.latent.space/feed", label: "Latent Space" },
+  { url: "https://biotechbio.substack.com/feed", label: "Techbio<>Biotech" },
+  { url: "https://scalingbiotech.substack.com/feed", label: "Scaling Biotech" },
+  { url: "https://www.statnews.com/feed/", label: "STAT News" },
 
   // ── Institutional research (podcast feeds — the reports themselves are gated) ──
   { url: "https://rss.art19.com/thoughts-on-the-market", label: "Morgan Stanley · Thoughts on the Market" },
   { url: "https://feeds.megaphone.fm/GLD9218176758", label: "Goldman Sachs · Exchanges" },
 
-  // ── Journals: AI for science ──
+  // ── Journals: one or two per domain, kept for signal density ──
   { url: "http://feeds.nature.com/nature/rss/current", label: "Nature" },
-  { url: "https://www.science.org/rss/news_current.xml", label: "Science" },
   { url: "https://www.nature.com/natmachintell.rss", label: "Nature Machine Intelligence" },
-  { url: "https://www.nature.com/natcomputsci.rss", label: "Nature Computational Science" },
-  { url: "https://www.nature.com/nmeth.rss", label: "Nature Methods" },
-  { url: "https://www.pnas.org/action/showFeed?type=etoc&feed=rss&jc=pnas", label: "PNAS" },
-  { url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=sciadv", label: "Science Advances" },
-
-  // ── Journals: life science ──
   { url: "https://www.nature.com/nbt.rss", label: "Nature Biotechnology" },
   { url: "https://www.nature.com/nm.rss", label: "Nature Medicine" },
-  { url: "https://www.nature.com/ng.rss", label: "Nature Genetics" },
-  { url: "https://www.nature.com/nrd.rss", label: "Nature Reviews Drug Discovery" },
-  { url: "https://www.cell.com/cell/inpress.rss", label: "Cell" },
-  { url: "http://connect.biorxiv.org/biorxiv_xml.php?subject=all", label: "bioRxiv" },
-  { url: "https://www.statnews.com/feed/", label: "STAT News" },
-  { url: "https://biotechbio.substack.com/feed", label: "Techbio<>Biotech" },
-  { url: "https://scalingbiotech.substack.com/feed", label: "Scaling Biotech" },
-
-  // ── Journals: hardware, photonics, energy ──
   { url: "https://www.nature.com/natelectron.rss", label: "Nature Electronics" },
   { url: "https://www.nature.com/nphoton.rss", label: "Nature Photonics" },
-  { url: "https://www.nature.com/nenergy.rss", label: "Nature Energy" },
-  { url: "https://www.nature.com/nnano.rss", label: "Nature Nanotechnology" },
 
   // ── Physical AI ──
   { url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=scirobotics", label: "Science Robotics" },
