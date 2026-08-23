@@ -160,4 +160,20 @@ describe("RSS feed parsing", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("served no feed after a retry"));
     warn.mockRestore();
   });
+
+  it("carries the source tier onto every entry so the briefing can tell findings from reporting", async () => {
+    mockFeed(RSS2_FEED);
+    const { results } = await searchNews([], [], [
+      { url: "https://www.nature.com/nmeth.rss", label: "Nature Methods", tier: "primary" },
+    ]);
+
+    expect(results[0].tier).toBe("primary");
+  });
+
+  it("leaves the tier unset when a feed does not declare one", async () => {
+    mockFeed(RSS2_FEED);
+    const { results } = await searchNews([], [], [{ url: "https://example.com/feed", label: "Unknown" }]);
+
+    expect(results[0].tier).toBeUndefined();
+  });
 });

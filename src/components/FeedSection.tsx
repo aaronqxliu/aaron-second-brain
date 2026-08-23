@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Rss, RefreshCw, ChevronDown, ChevronUp, X, ExternalLink, Plus, Filter, Check, Star } from "lucide-react";
+import { Rss, RefreshCw, Sparkles, ChevronDown, ChevronUp, X, ExternalLink, Plus, Filter, Check, Star } from "lucide-react";
 import { FeedItem, FeedSignals, InsightItem, StructuredBriefing as StructuredBriefingType } from "@/lib/types";
 import { formatRelativeTime } from "@/lib/utils";
 
@@ -723,6 +723,42 @@ function StructuredBriefing({
 
   return (
     <div className="space-y-4 group/briefing">
+      {/* Not picked up yet — findings still at their source */}
+      {briefing.frontier && briefing.frontier.length > 0 && (
+        <div
+          className="rounded-lg p-3 space-y-2 border"
+          style={{ borderColor: `${palette[500]}40`, backgroundColor: `${palette[500]}0C` }}
+        >
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" style={{ color: palette[600] }} />
+            <h4 className="text-sm font-semibold" style={{ color: palette[600] }}>
+              Not picked up yet
+            </h4>
+            <span className="text-xs" style={{ color: theme.textMuted }}>
+              at the source, no coverage
+            </span>
+          </div>
+          {briefing.frontier.map((item, i) => (
+            <div key={i} className="flex items-start gap-2 text-sm">
+              <button
+                onClick={() => scrollToRef(item.ref)}
+                className="font-bold shrink-0 px-1.5 py-0.5 rounded-full text-xs hover:underline"
+                style={{ backgroundColor: `${palette[500]}20`, color: palette[600] }}
+                title={items[item.ref - 1]?.title}
+              >
+                #{item.ref}
+              </button>
+              <div>
+                <div style={{ color: theme.text }}>{item.claim}</div>
+                <div className="text-xs mt-0.5" style={{ color: theme.textMuted }}>
+                  {item.whyUnnoticed}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold" style={{ color: palette[600] }}>
@@ -1006,11 +1042,19 @@ function FeedCard({
           {item.title}
         </h3>
 
-        {/* Source + Time */}
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: theme.textMuted }}>
+        {/* Source + Time + Category */}
+        <div className="flex items-center gap-1.5 text-xs flex-wrap" style={{ color: theme.textMuted }}>
           <span>{item.source}</span>
           <span>·</span>
           <span>{formatRelativeTime(item.publishedAt)}</span>
+          {item.category && (
+            <span
+              className="px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+            >
+              {item.category}
+            </span>
+          )}
         </div>
 
         {/* Why read */}

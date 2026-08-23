@@ -5,6 +5,8 @@
  * Each prompt is a function that takes parameters and returns the full prompt string.
  */
 
+import { FEED_CATEGORIES } from "./config";
+
 export function promptGenerateTitle(content: string): string {
   return `Generate a concise, descriptive title (5-10 words) for this content.
 
@@ -321,65 +323,80 @@ For each result, decide: **Recommend** or **Skip**?
 The user wants to EXPAND their knowledge in their interest areas, NOT just see content similar to what they already have.
 
 ### Recommend if:
-1. **Matches configured interests**: Directly about one of the user's configured interest topics
-2. **New development**: Something that just happened this week (announcements, releases, events)
-3. **High engagement/discussion**: Posts with significant community discussion (check for comment counts, upvotes in snippet)
-4. **New perspective or debate**: Different viewpoint, controversy, or evolving discussion
-5. **From trusted sources**: Established publications or user's preferred sources
-6. **Matches active interactions**: Directly relates to user's starred highlights or learned concepts
+1. **Reports a finding**: a result, a measurement, a shipped system, a first-party number
+2. **Carries a specific claim**: a figure, benchmark, price, or date you could check
+3. **Cuts against the current story**: evidence that contradicts what the field assumes
+4. **New development**: something that happened this week
+5. **Matches configured interests** or the user's active reading
 
 ### Skip if:
-1. **Exact same content**: Literally the same story they already have
-2. **Low engagement**: Few comments, no discussion (especially for Reddit/HN)
+1. **Restates someone else's report** and adds no new fact or judgment
+2. **Aggregates or rounds up** what everyone already saw this week
 3. **Generic intro content**: "What is X?" when they clearly know X deeply
-4. **SEO spam / clickbait**: Low-quality content farming
-5. **Outdated**: Old content repackaged
-6. **Off-topic**: Not related to configured interests OR library topics
+4. **Announces without content**: a partnership or launch with no numbers or mechanism
+5. **SEO spam / clickbait**
+6. **Off-topic**: not related to configured interests OR library topics
 
-## KEY PRINCIPLE: Domain ≠ Duplicate
+## KEY PRINCIPLE: Domain != Duplicate
 
 If a user is interested in a topic, they want to see WHAT'S HAPPENING in that area — new developments, debates, tools.
 
 DO NOT skip content just because it's in the same domain. Skip only if it's literally the SAME story or adds nothing new.
 
 **Decision framework:**
-- User has deep article on Topic X → New development about X → RECOMMEND (news)
-- User has deep article on Topic X → "Intro to X" article → SKIP (they know this)
-- User has article from Source A → Different story from Source A → RECOMMEND (new content)
+- User has deep article on Topic X -> New development about X -> RECOMMEND (news)
+- User has deep article on Topic X -> "Intro to X" article -> SKIP (they know this)
+- User has article from Source A -> Different story from Source A -> RECOMMEND (new content)
+
+## Category
+
+Tag every item with exactly one category from this list:
+${FEED_CATEGORIES.join(" | ")}
+
+Use "Models & Research" for model releases, training methods and ML technique work.
+Use "Industry" for funding, market structure, corporate strategy and pricing.
 
 ## Writing Reasons
 
 **whyRead** (create curiosity, not summaries):
-✓ "First public post-mortem of why this failed"
-✓ "Heated debate with 200+ comments"
-✓ "Claims 10x improvement over current approach"
-✗ "Related to [topic]" (too vague)
-✗ "Discusses [topic]" (boring summary)
+Lead with the specific claim, not the topic.
++ "Claims 10x improvement, with the benchmark included"
++ "First public post-mortem of why this failed"
++ "Puts a number on something usually estimated"
+- "Related to [topic]" (too vague)
+- "Discusses [topic]" (boring summary)
 
 **whySkip** (be specific):
-✓ "Beginner intro — covered at deeper level in your library"
-✓ "Same announcement, different publication"
-✓ "Low engagement — only 3 comments"
++ "Beginner intro — covered at deeper level in your library"
++ "Same announcement, different publication"
++ "Roundup of stories already in this feed"
 
 ## Output Format
 {
   "items": [
-    {"index": 1, "action": "recommend", "score": 85, "whyRead": "Specific reason to read"},
-    {"index": 3, "action": "skip", "score": 25, "whySkip": "Specific reason to skip"}
+    {"index": 1, "action": "recommend", "score": 85, "category": "AI Infra", "whyRead": "Specific reason to read"},
+    {"index": 3, "action": "skip", "score": 25, "category": "Industry", "whySkip": "Specific reason to skip"}
   ]
 }
 
 ## Scoring Guide
-- 85-100: Must see — breaking news, major announcements, viral discussions (100+ comments)
-- 75-84: Worth reading — solid new angle, notable development
-- 60-74: Maybe later — some value but not urgent
-- Below 60: Skip — low value, redundant, or outdated
+Score on what the item contains, not on how much attention it has attracted.
+Popularity is a lagging signal and is not evidence of value here.
+
+- 85-100: A finding at its source — original result, first-party data, a
+  verifiable number, or evidence that contradicts the consensus
+- 75-84: Genuine analysis that shows its reasoning and reaches a conclusion
+- 60-74: Reports a real fact but adds no judgment beyond it
+- Below 60: Restates, aggregates, or announces without substance
+
+Recency matters within a band, not across them: prefer the fresher of two
+comparable items, but never rank a roundup above a result because it is newer.
 
 ## Rules
 - "index" = 1-based position in search results
 - Include ALL items with action "recommend" (score >= 75) or "skip" (score < 75)
 - Be SELECTIVE — only ~30% of items should be "recommend"
-- Prioritize HIGH ENGAGEMENT content (lots of comments/discussion)
+- Every item needs a "category"
 
 ## JSON Format
 - Respond with ONLY valid JSON, no markdown code blocks
@@ -387,7 +404,7 @@ DO NOT skip content just because it's in the same domain. Skip only if it's lite
 - NEVER include quotes (") inside string values
 
 Example:
-{"items": [{"index": 1, "action": "recommend", "score": 85, "whyRead": "200+ comments"}, {"index": 2, "action": "skip", "score": 30, "whySkip": "Outdated news"}]}`;
+{"items": [{"index": 1, "action": "recommend", "score": 88, "category": "AI Infra", "whyRead": "Puts a real number on HBM supply"}, {"index": 2, "action": "skip", "score": 30, "whySkip": "Weekly roundup, nothing new", "category": "Industry"}]}`;
 }
 
 export function promptGenerateInsights(
@@ -517,6 +534,10 @@ ${feedContext}
 ## Your Task
 Tell the user NEW information they don't already know. The briefing itself should be valuable - they should learn something just by reading it.
 
+Each feed item is marked [primary] or [secondary]. Primary sources publish the
+finding itself — journals, preprints, lab and company posts, first-party data.
+Secondary sources report on someone else's finding.
+
 **RULES:**
 1. **Tell them NEWS** - What JUST happened? What's the new development?
 2. **Don't repeat their library** - They already know what's in their library. Tell them what's NEW.
@@ -525,9 +546,32 @@ Tell the user NEW information they don't already know. The briefing itself shoul
 5. **Use bold for key facts** - Use **bold** around key names, numbers, and terms so they pop out when scanning
 6. **Connections to user's knowledge** - If a news item connects to something in the user's library or interactions, weave it into the sentence naturally and bold it, e.g. "...which builds on your **'wrong shape software'** concept" or "...relevant to your notes on **prompt engineering**"
 
+## FIRST: What has not been picked up yet
+
+Before the news, look across the whole feed for **[primary] items whose finding
+no [secondary] item in this feed is covering**. These are results still sitting
+at their source, before the reporting and commentary layer reaches them — the
+window where reading it early is worth something.
+
+Judge by subject matter, not by wording: a paper on optical interconnect and a
+news story on CPO switches are the same finding reaching different audiences,
+so that paper is already covered.
+
+Rules:
+- Only [primary] items qualify.
+- Include an item only if genuinely nothing in the feed reports on it. Being the
+  best article on a busy topic does not count.
+- Most days this list is short, and some days it is empty. An empty list is the
+  honest answer; do not pad it.
+- "claim" states what was actually found, with the number or result if there is
+  one. Not the topic — the finding.
+
 ## Output Format
 Return a JSON object:
 {
+  "frontier": [
+    { "ref": 7, "claim": "Blinded benchmark puts in-silico antibody hit rate at 12% against measured affinity", "whyUnnoticed": "Published four days ago; no outlet in this feed has covered it" }
+  ],
   "news": [
     {
       "text": "**Company X** raised **$500M** at **$5B valuation**, 3x increase from last round. Led by Sequoia with a16z participating.",
@@ -548,6 +592,7 @@ Return a JSON object:
 - "text": 1-2 sentences that tell the full story. Use **bold** for key facts. If there's a connection to the user's knowledge, mention it inline with bold.
 - "refs": Feed item numbers (1-based) this draws from.
 - "goDeeper": Only 2-3 items worth clicking. "reason" = what extra detail the article has.
+- "frontier": primary-source findings with no secondary coverage in this feed. Omit the field entirely when there are none — never invent one to fill the section.
 
 Respond with ONLY valid JSON, no markdown code blocks.`;
 }

@@ -1,6 +1,6 @@
 import { debugLog } from "./log";
 import { promises as fs } from "fs";
-import { Analysis, Highlight, Connection, FeedItem, InsightItem, StructuredBriefing, BriefingNewsItem, BriefingGoDeeper } from "./types";
+import { Analysis, Highlight, Connection, FeedItem, InsightItem, StructuredBriefing, BriefingNewsItem, BriefingGoDeeper, BriefingFrontierItem } from "./types";
 import { BraveSearchResult } from "./search";
 import { FEED_CONFIG } from "./config";
 import path from "path";
@@ -525,8 +525,11 @@ export async function filterFeedItems(
   const batchResults = await Promise.all(
     batches.map(async (batch) => {
       const resultsContext = batch
-        .map((r, i) => `${i + 1}. "${escapeForJson(r.title?.slice(0, 60) ?? "")}"
-   Source: ${r.meta_url?.hostname ?? "unknown"}, Age: ${r.age ?? "recent"}`)
+        .map((r, i) => {
+          const snippet = escapeForJson(r.description ?? "").slice(0, 300);
+          return `${i + 1}. "${escapeForJson(r.title ?? "")}"
+   Source: ${r.meta_url?.hostname ?? "unknown"} [${r.tier ?? "secondary"}], Age: ${r.age ?? "recent"}${snippet ? `\n   ${snippet}` : ""}`;
+        })
         .join("\n");
 
       const prompt = promptFilterFeed(libraryContext, resultsContext, FEED_CONFIG.maxFeedItems, preferredSources, interactionContext, interests);
@@ -555,6 +558,8 @@ export async function filterFeedItems(
             publishedAt: searchResult.page_age ?? new Date().toISOString(),
             source: searchResult.meta_url?.hostname ?? "unknown",
             thumbnail: searchResult.thumbnail?.src,
+            tier: searchResult.tier,
+            category: typeof scored.category === "string" ? scored.category : undefined,
             scoring: { overall, action, whyRead: scored.whyRead, whySkip: scored.whySkip, connectsTo: scored.connectsTo },
           });
         }
@@ -613,7 +618,7 @@ export async function generateBriefing(
     .slice(0, 20);
 
   const feedContext = topItems.map((item, i) =>
-    `${i + 1}. "${item.title}" (${item.source}) - ${item.scoring.whyRead || ""}`
+    `${i + 1}. [${item.tier ?? "secondary"}] "${item.title}" (${item.source}${item.category ? `, ${item.category}` : ""}) - ${item.scoring.whyRead || ""}`
   ).join("\n");
 
   const libraryContext = userSources.length > 0
@@ -641,7 +646,18 @@ export async function generateBriefing(
       reason: (item.reason as string) ?? "",
     }));
 
-    return { news, goDeeper };
+    // Only primary-source items belong here; drop anything the model
+    // mislabelled rather than presenting reporting as an unnoticed finding.
+    const frontier: BriefingFrontierItem[] = (parsed.frontier ?? [])
+      .map((item: Record<string, unknown>) => ({
+        ref: (item.ref as number) ?? 0,
+        claim: (item.claim as string) ?? "",
+        whyUnnoticed: (item.whyUnnoticed as string) ?? "",
+      }))
+      .filter((item: BriefingFrontierItem) =>
+        item.claim && topItems[item.ref - 1]?.tier === "primary");
+
+    return { news, goDeeper, frontier: frontier.length > 0 ? frontier : undefined };
   } catch (err) {
     console.error("[generateBriefing] Failed:", err);
     return null;

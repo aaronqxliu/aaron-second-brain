@@ -5,9 +5,11 @@ import { debugLog } from "./log";
 
 import { API_CONFIG, FEED_CONFIG } from "./config";
 import type { RssFeedSource } from "./storage";
+import type { SourceTier } from "./types";
 
 export interface BraveSearchResult {
   title: string;
+  tier?: SourceTier;             // Set for RSS results; search results are unclassified
   url: string;
   description: string;
   age?: string;                  // e.g. "2 hours ago"
@@ -126,7 +128,7 @@ async function requestFeedXml(feedUrl: string, label: string): Promise<string | 
   }
 }
 
-async function fetchRSS(feedUrl: string, label: string): Promise<BraveSearchResult[]> {
+async function fetchRSS(feedUrl: string, label: string, tier?: SourceTier): Promise<BraveSearchResult[]> {
   try {
     // nature.com turns away two or three requests out of every batch, and
     // which ones it picks rotates, so one retry recovers most of them.
@@ -160,6 +162,7 @@ async function fetchRSS(feedUrl: string, label: string): Promise<BraveSearchResu
 
       results.push({
         title: item.title,
+        tier,
         url: item.url,
         description: item.description.replace(/<[^>]*>/g, "").slice(0, 200),
         age: item.pubDate ? getRelativeTime(new Date(item.pubDate)) : undefined,
@@ -212,7 +215,7 @@ export async function searchNews(
   // 1. Fetch all RSS feeds in parallel (keyword-independent)
   if (rssFeeds.length > 0) {
     const rssResults = await Promise.all(
-      rssFeeds.map(feed => fetchRSS(feed.url, feed.label))
+      rssFeeds.map(feed => fetchRSS(feed.url, feed.label, feed.tier))
     );
     for (const results of rssResults) {
       for (const result of results) {

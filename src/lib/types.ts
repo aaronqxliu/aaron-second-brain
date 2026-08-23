@@ -202,12 +202,32 @@ export interface BriefingGoDeeper {
   reason: string;        // Why it's worth clicking
 }
 
+/**
+ * A finding still confined to its primary source — a paper, a lab post, a
+ * first-party dataset — that no reporting or commentary in this feed has
+ * picked up yet. The window before it becomes consensus.
+ */
+export interface BriefingFrontierItem {
+  ref: number;           // Feed item number
+  claim: string;         // What the primary source actually found
+  whyUnnoticed: string;  // Why this has not been picked up yet
+}
+
 export interface StructuredBriefing {
   news: BriefingNewsItem[];
   goDeeper: BriefingGoDeeper[];
+  frontier?: BriefingFrontierItem[];
 }
 
 // Feed types
+
+/**
+ * primary  — the finding itself: journals, preprints, lab and company posts,
+ *            first-party data and research.
+ * secondary — reporting and commentary on someone else's finding.
+ */
+export type SourceTier = "primary" | "secondary";
+
 export interface FeedItem {
   id: string;                    // Generated hash of URL
   title: string;
@@ -216,6 +236,8 @@ export interface FeedItem {
   publishedAt: string;           // ISO date
   source: string;                // News source name
   thumbnail?: string;            // Thumbnail image URL
+  tier?: SourceTier;             // Whether the feed it came from is first-party
+  category?: string;             // Knowledge area, from FEED_CATEGORIES
   scoring: {
     overall: number;             // 0-100 combined score
     action: "recommend" | "skip";

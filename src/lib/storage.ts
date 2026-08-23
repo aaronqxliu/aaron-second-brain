@@ -8,6 +8,7 @@ import { Source, SourceMeta, SourceSummary, Analysis, ACTION_CONFIG, ActionType,
 import { AnalysisSchema, OriginalDataSchema } from "./schemas";
 import type { AgentProvider } from "./agentTypes";
 import { DEFAULT_RSS_FEEDS } from "./config";
+import type { SourceTier } from "./types";
 
 /**
  * User configuration stored in config.json
@@ -17,6 +18,7 @@ export type ThemeMode = "light" | "dark" | "system";
 export interface RssFeedSource {
   url: string;    // e.g. "https://www.reddit.com/r/LocalLLaMA/.rss"
   label: string;  // e.g. "r/LocalLLaMA"
+  tier?: SourceTier; // Whether this source publishes findings or reports on them
 }
 
 export interface UserConfig {
