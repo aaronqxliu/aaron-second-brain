@@ -131,17 +131,33 @@ describe("RSS feed parsing", () => {
     expect(results.at(-1)?.title).toBe(`Post ${FEED_CONFIG.maxItemsPerFeed - 1}`);
   });
 
-  it("treats an HTML bot-check response as a blocked feed, not an empty one", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(
-      "<!DOCTYPE html><html><body>Verifying you are human</body></html>",
-      { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
-    )));
+  const botCheck = () => new Response(
+    "<!DOCTYPE html><html><body>Verifying you are human</body></html>",
+    { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
+  );
+
+  it("retries a bot check and keeps the feed when the second try succeeds", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(botCheck())
+      .mockResolvedValueOnce(new Response(RDF_FEED, { status: 200, headers: { "content-type": "application/rss+xml" } }));
+    vi.stubGlobal("fetch", fetchMock);
 
     const { results } = await searchNews([], [], [{ url: "https://www.nature.com/nmeth.rss", label: "Nature Methods" }]);
 
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(results).toHaveLength(1);
+  });
+
+  it("reports a feed blocked twice rather than reporting it as quiet", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = vi.fn(async () => botCheck());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { results } = await searchNews([], [], [{ url: "https://www.nature.com/nmeth.rss", label: "Nature Methods" }]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(results).toHaveLength(0);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("served HTML instead of a feed"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("served no feed after a retry"));
     warn.mockRestore();
   });
 });

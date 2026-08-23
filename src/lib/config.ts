@@ -10,6 +10,7 @@ export const FEED_CONFIG = {
   maxInterests: 5,         // Max search topics to extract from library
   maxFeedItems: 30,        // Max items to show in feed (from ~50 search results)
   maxItemsPerFeed: 8,     // Newest items taken per RSS feed — see fetchRSS
+  blockedRetryMs: 1500,   // Pause before retrying a feed that answered with a bot check
 };
 
 // Bounds on how much history is packed into agent prompts. Without these,
@@ -43,6 +44,7 @@ export const DEFAULT_RSS_FEEDS: RssFeedSource[] = [
   { url: "https://blog.cloudflare.com/rss/", label: "Cloudflare Blog" },
 
   // ── Independent analysts ──
+  { url: "https://newsletter.semianalysis.com/feed", label: "SemiAnalysis" },
   { url: "https://www.fabricatedknowledge.com/feed", label: "Fabricated Knowledge" },
   { url: "https://thechipletter.substack.com/feed", label: "The Chip Letter" },
   { url: "https://d2d.substack.com/feed", label: "Digits to Dollars" },
@@ -107,7 +109,7 @@ export const DEFAULT_RSS_FEEDS: RssFeedSource[] = [
 
 // Kept short on purpose: search runs every interest against every domain, so
 // each entry here multiplies Brave API calls per feed refresh.
-export const DEFAULT_SEARCH_SOURCES = ["semianalysis.com", "hai.stanford.edu", "epoch.ai"];
+export const DEFAULT_SEARCH_SOURCES = ["stratechery.com", "hai.stanford.edu", "epoch.ai"];
 
 // First-run starter pack: curated public reads a new user can capture with
 // one click. Only titles and URLs ship here — each user's agent fetches and

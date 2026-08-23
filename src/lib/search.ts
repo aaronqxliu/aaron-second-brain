@@ -98,11 +98,10 @@ function parseAtomEntries(xml: string, limit: number): FeedEntry[] {
  * item costs a slot in the parallel LLM filter batches downstream.
  * 10s timeout to avoid blocking on slow feeds.
  */
-async function fetchRSS(feedUrl: string, label: string): Promise<BraveSearchResult[]> {
+async function requestFeedXml(feedUrl: string, label: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
-
     const response = await fetch(feedUrl, {
       headers: {
         "User-Agent": "SecondBrain/1.0",
@@ -110,24 +109,38 @@ async function fetchRSS(feedUrl: string, label: string): Promise<BraveSearchResu
       },
       signal: controller.signal,
     });
-    clearTimeout(timeout);
 
     if (!response.ok) {
       console.error(`[fetchRSS] ${label} failed: ${response.status}`);
+      return null;
+    }
+    // Some publishers answer a bot check with 200 and an HTML body. Parsing
+    // that yields zero entries and no error, which reads as "this feed is
+    // quiet" rather than "this feed was blocked".
+    if ((response.headers.get("content-type") ?? "").includes("text/html")) {
+      return null;
+    }
+    return await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchRSS(feedUrl: string, label: string): Promise<BraveSearchResult[]> {
+  try {
+    // nature.com turns away two or three requests out of every batch, and
+    // which ones it picks rotates, so one retry recovers most of them.
+    let xml = await requestFeedXml(feedUrl, label);
+    if (xml === null) {
+      await sleep(FEED_CONFIG.blockedRetryMs);
+      xml = await requestFeedXml(feedUrl, label);
+    }
+    if (xml === null) {
+      console.warn(`[fetchRSS] ${label} served no feed after a retry (likely a bot check): ${feedUrl}`);
       return [];
     }
 
-    const xml = await response.text();
     const hostname = new URL(feedUrl).hostname;
-
-    // Some publishers answer a bot check with 200 + an HTML page. Parsing that
-    // yields zero entries and no error, which reads as "this feed is quiet"
-    // rather than "this feed was blocked". Say which one it is.
-    const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("text/html")) {
-      console.warn(`[fetchRSS] ${label} served HTML instead of a feed (likely a bot check): ${feedUrl}`);
-      return [];
-    }
 
     // Try RSS 2.0 / RDF first, fall back to Atom. Both stop at the cap: a
     // podcast archive can run to 20MB and there is no reason to parse past
