@@ -4,7 +4,7 @@ import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 import { AGENT_PROVIDER_DETAILS, DEFAULT_AGENT_PROVIDER, AgentProvider, AgentStatus, isAgentProvider } from "./agentTypes";
-import { AGENT_CLI_PROVIDERS, buildAgentCommandSpec } from "./agentProviders";
+import { AGENT_CLI_PROVIDERS, buildAgentCommandSpec, type AgentStatusResultInput } from "./agentProviders";
 import { getCurrentRootPath, loadProfileDoc, loadUserConfig } from "./storage";
 
 const AGENT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -215,7 +215,9 @@ function spawnAgentForText(
           reject(error);
         }
       } else {
-        const detail = stderr.trim();
+        // The CLI reports auth failures on stdout, not stderr. Reading only stderr
+        // turned "OAuth session expired" into a bare "exited with code 1".
+        const detail = stderr.trim() || stdout.trim();
         const message = detail
           ? `${AGENT_PROVIDER_DETAILS[provider].label} exited with code ${code}: ${detail}`
           : `${AGENT_PROVIDER_DETAILS[provider].label} exited with code ${code}`;
@@ -237,26 +239,19 @@ export function getAgentChatCommand(provider: AgentProvider, cwd: string, model?
   return buildAgentCommandSpec(provider, "chat", { rootPath: getCurrentRootPath(), cwd, model });
 }
 
-export async function getAgentStatus(provider: AgentProvider): Promise<AgentStatus> {
-  const commandSpec = buildAgentCommandSpec(provider, "status", { rootPath: getCurrentRootPath() });
-  const definition = AGENT_CLI_PROVIDERS[provider];
-
+function probeAgentCommand(
+  command: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+): Promise<AgentStatusResultInput> {
   return new Promise((resolve) => {
-    const proc = spawn(commandSpec.command, commandSpec.args, {
-      stdio: ["ignore", "pipe", "pipe"],
-      env: commandSpec.env,
-    });
+    const proc = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], env });
 
     let stdout = "";
     let stderr = "";
     const timeout = setTimeout(() => {
       proc.kill();
-      resolve(definition.classifyStatus({
-        stdout,
-        stderr,
-        timedOut: true,
-        timeoutSeconds: STATUS_TIMEOUT_MS / 1000,
-      }, commandSpec.command));
+      resolve({ stdout, stderr, timedOut: true, timeoutSeconds: STATUS_TIMEOUT_MS / 1000 });
     }, STATUS_TIMEOUT_MS);
 
     proc.stdout.on("data", (data) => {
@@ -269,14 +264,34 @@ export async function getAgentStatus(provider: AgentProvider): Promise<AgentStat
 
     proc.on("close", (code) => {
       clearTimeout(timeout);
-      resolve(definition.classifyStatus({ code, stdout, stderr }, commandSpec.command));
+      resolve({ code, stdout, stderr });
     });
 
     proc.on("error", (error: NodeJS.ErrnoException) => {
       clearTimeout(timeout);
-      resolve(definition.classifyStatus({ stdout, stderr, error }, commandSpec.command));
+      resolve({ stdout, stderr, error });
     });
   });
+}
+
+export async function getAgentStatus(provider: AgentProvider): Promise<AgentStatus> {
+  const commandSpec = buildAgentCommandSpec(provider, "status", { rootPath: getCurrentRootPath() });
+  const definition = AGENT_CLI_PROVIDERS[provider];
+
+  const status = definition.classifyStatus(
+    await probeAgentCommand(commandSpec.command, commandSpec.args, commandSpec.env),
+    commandSpec.command,
+  );
+
+  // A present-but-signed-out CLI passes the version check and then fails every
+  // real call, so ask providers that can tell us before reporting "ready".
+  if (status.state !== "ready" || !definition.authArgs || !definition.classifyAuth) {
+    return status;
+  }
+  return definition.classifyAuth(
+    await probeAgentCommand(commandSpec.command, definition.authArgs, commandSpec.env),
+    status,
+  );
 }
 
 export async function getAgentStatuses(): Promise<Record<AgentProvider, AgentStatus>> {

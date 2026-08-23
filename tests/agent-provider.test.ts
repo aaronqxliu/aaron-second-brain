@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 import { AGENT_CLI_PROVIDERS, buildAgentCommandSpec, resolveExecutableCommand } from "@/lib/agentProviders";
-import { callAgent, getConfiguredAgentProvider } from "@/lib/agent";
+import { callAgent, getAgentStatus, getConfiguredAgentProvider } from "@/lib/agent";
 import { DEFAULT_AGENT_PROVIDER, isAgentProvider } from "@/lib/agentTypes";
 
 const ORIGINAL_ENV = { ...process.env };
@@ -227,5 +227,44 @@ printf 'stdout noise'
     expect(outputPath).not.toContain(path.join(tmpRoot, ".debug"));
     await expect(fs.access(outputPath)).rejects.toThrow();
     await expect(fs.access(path.join(tmpRoot, ".debug"))).rejects.toThrow();
+  });
+});
+
+describe("agent status and failure reporting", () => {
+  // Branches on argv the way the real CLI does: --version answers without
+  // needing a session, `auth status` reports whether one exists.
+  const fakeCli = (authBody: string) =>
+    `#!/bin/sh\ncase "$1" in\n  --version) printf '9.9.9 (Fake Claude)' ;;\n  auth) printf '%s' '${authBody}' ;;\nesac\nexit 0\n`;
+
+  it("reports a signed-out CLI as unusable even though --version succeeds", async () => {
+    process.env.SECONDBRAIN_AGENT_COMMAND = await writeExecutable("fake-claude", fakeCli('{"loggedIn": false}'));
+
+    const status = await getAgentStatus("claude");
+
+    expect(status.state).toBe("error");
+    expect(status.message).toContain("signed out");
+    expect(status.message).toContain("claude auth login");
+  });
+
+  it("reports a signed-in CLI as ready and keeps the version", async () => {
+    process.env.SECONDBRAIN_AGENT_COMMAND = await writeExecutable("fake-claude", fakeCli('{"loggedIn": true}'));
+
+    const status = await getAgentStatus("claude");
+
+    expect(status.state).toBe("ready");
+    expect(status.version).toBe("9.9.9 (Fake Claude)");
+  });
+
+  it("keeps the version verdict when the auth probe output cannot be parsed", async () => {
+    process.env.SECONDBRAIN_AGENT_COMMAND = await writeExecutable("fake-claude", fakeCli("not json"));
+
+    await expect(getAgentStatus("claude")).resolves.toMatchObject({ state: "ready" });
+  });
+
+  it("surfaces a failing agent's stdout, which is where auth errors are written", async () => {
+    const failing = "#!/bin/sh\ncat >/dev/null\nprintf 'OAuth session expired and could not be refreshed'\nexit 1\n";
+    process.env.SECONDBRAIN_AGENT_COMMAND = await writeExecutable("failing-agent", failing);
+
+    await expect(callAgent("prompt", "unit")).rejects.toThrow(/OAuth session expired/);
   });
 });

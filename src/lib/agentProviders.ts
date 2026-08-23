@@ -31,6 +31,11 @@ export interface AgentStatusResultInput {
 export interface AgentCliProviderDefinition {
   id: AgentProvider;
   statusArgs: string[];
+  // Optional follow-up probe. `--version` succeeds on a signed-out CLI, so a
+  // provider that can report its own sign-in state declares it here and gets
+  // to downgrade an otherwise-ready status.
+  authArgs?: string[];
+  classifyAuth?: (input: AgentStatusResultInput, ready: AgentStatus) => AgentStatus;
   listModelsArgs?: string[]; // Optional CLI command that enumerates available models
   chatEventFormat: AgentChatEventFormat;
   chatTransport: AgentChatTransport;
@@ -156,6 +161,24 @@ export const AGENT_CLI_PROVIDERS: Record<AgentProvider, AgentCliProviderDefiniti
   claude: {
     id: "claude",
     statusArgs: ["--version"],
+    authArgs: ["auth", "status"],
+    classifyAuth: (input, ready) => {
+      // `claude auth status` exits 0 either way, so its JSON body is the only
+      // signal. Anything unparseable leaves the version verdict alone rather
+      // than inventing a failure on a CLI that predates this subcommand.
+      let loggedIn: unknown;
+      try {
+        loggedIn = JSON.parse(input.stdout.trim())?.loggedIn;
+      } catch {
+        return ready;
+      }
+      if (loggedIn !== false) return ready;
+      return {
+        ...ready,
+        state: "error",
+        message: "Claude Code is installed but signed out. Run `claude auth login`, then reconnect.",
+      };
+    },
     chatEventFormat: "claude-stream-json",
     chatTransport: "prompt-stdin",
     buildTextArgs: ({ model }) => [
