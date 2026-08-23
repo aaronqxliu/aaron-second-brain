@@ -1,7 +1,7 @@
 import { debugLog } from "@/lib/log";
 import { NextRequest, NextResponse } from "next/server";
 import { loadSource, findEntryPath, listSourcesForConnections, setSourceConnections } from "@/lib/storage";
-import { analyzeContent, formatTextContent, findRelatedSources, analyzeConnections, mergeSourceIntoConnections } from "@/lib/claude";
+import { analyzeContent, analyzeFile, formatTextContent, findRelatedSources, analyzeConnections, mergeSourceIntoConnections } from "@/lib/claude";
 import { extractFromUrl, extractFromHtml } from "@/lib/content";
 import { Connection } from "@/lib/types";
 import { promises as fs } from "fs";
@@ -46,7 +46,19 @@ export async function POST(
 
     debugLog(`Original content length: ${source.originalContent?.length || 0}, hasStoredHtml: ${hasStoredHtml}, isTwitter: ${isTwitter}, hasRenderedTwitterContent: ${hasRenderedTwitterContent}`);
 
-    if (shouldUseStoredHtml) {
+    // PDFs and images carry no re-extractable text of their own: the agent has
+    // to read the stored original. Without this branch they fell through to the
+    // plain-text path, which re-formatted the file's raw bytes.
+    const originalMeta = JSON.parse(await fs.readFile(path.join(sourceDir, "meta.json"), "utf-8"));
+    const originalFile: string | undefined = originalMeta.original_file;
+    const isFileSource = source.meta.type === "document" || source.meta.type === "image";
+
+    if (isFileSource && originalFile) {
+      debugLog(`Re-analyzing stored file: ${originalFile}`);
+      const extracted = await analyzeFile(id, originalFile, sourceDir);
+      newContent = extracted.content;
+      newTitle = extracted.title;
+    } else if (shouldUseStoredHtml) {
       // Use stored HTML to reprocess - don't pass providedTitle so it extracts fresh
       debugLog("Re-processing from stored HTML...");
       const extracted = await extractFromHtml(source.originalContent, source.meta.sourceUrl, undefined, id);

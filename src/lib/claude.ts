@@ -110,10 +110,12 @@ export async function formatTextContent(text: string, sourceId?: string): Promis
  */
 export async function analyzeFile(
   sourceId: string,
-  originalFileName: string
+  originalFileName: string,
+  sourceDir?: string,
 ): Promise<{ title: string; content: string }> {
-  // File is saved at: user_data/library/{sourceId}/{originalFileName}
-  const filePath = path.join(getLibraryPath(), sourceId, originalFileName);
+  // Newly captured files sit at library/{sourceId}, but a source the user has
+  // filed into a folder does not, so callers that know the directory pass it.
+  const filePath = path.join(sourceDir ?? path.join(getLibraryPath(), sourceId), originalFileName);
   const ext = originalFileName.split(".").pop()?.toLowerCase() || "";
   const isPDF = ext === "pdf";
 

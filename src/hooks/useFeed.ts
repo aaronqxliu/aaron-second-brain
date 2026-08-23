@@ -41,15 +41,22 @@ export function useFeed() {
   // Filter out dismissed items
   const visibleItems = feed.items.filter((item) => !dismissedSet.has(item.id));
 
-  // Mark specific URLs as seen/unseen (called when user toggles briefing items)
-  const markBriefingRead = useCallback((text: string, urls: string[]) => {
-    setReadBriefingTexts(prev => new Set(prev).add(text));
+  // Record URLs the user is finished with, so the next refresh does not pay to
+  // re-rank them. Feed generation drops seen URLs before the agent sees them.
+  const markSeen = useCallback((urls: string[], text?: string) => {
+    if (urls.length === 0 && !text) return;
     fetch("/api/feed/seen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ urls, text }),
     }).catch(() => {});
   }, []);
+
+  // Mark specific URLs as seen/unseen (called when user toggles briefing items)
+  const markBriefingRead = useCallback((text: string, urls: string[]) => {
+    setReadBriefingTexts(prev => new Set(prev).add(text));
+    markSeen(urls, text);
+  }, [markSeen]);
 
   const markBriefingUnread = useCallback((text: string, urls: string[]) => {
     setReadBriefingTexts(prev => {
@@ -220,9 +227,13 @@ export function useFeed() {
     }
   }, [loadFeed, selectDate]);
 
+  // Dismissing only hid the item locally, so the next refresh spent an agent
+  // call re-ranking something the user had already rejected.
   const dismissItem = useCallback((id: string) => {
     setDismissedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-  }, [setDismissedIds]);
+    const url = feed.items.find((item) => item.id === id)?.url;
+    if (url) markSeen([url]);
+  }, [setDismissedIds, feed.items, markSeen]);
 
   return {
     items: visibleItems,
@@ -243,6 +254,7 @@ export function useFeed() {
     refreshFeed,
     loadFeedForDate,
     dismissItem,
+    markSeen,
     markBriefingRead,
     markBriefingUnread,
     starBriefingItem,

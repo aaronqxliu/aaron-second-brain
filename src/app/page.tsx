@@ -750,7 +750,11 @@ function HomeContent() {
                   availableDates={feed.availableDates}
                   selectedDate={feed.selectedDate}
                   onSelectDate={feed.loadFeedForDate}
-                  onCapture={handleCaptureUrl}
+                  onCapture={(url) => {
+                    handleCaptureUrl(url);
+                    // It is in the library now; no reason to rank it again.
+                    feed.markSeen([url]);
+                  }}
                   onDismiss={feed.dismissItem}
                   onRefresh={feed.refreshFeed}
                   onAddContext={(text, title) => {
