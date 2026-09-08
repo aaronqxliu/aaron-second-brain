@@ -46,6 +46,7 @@ Nobody needs one more tool that turns essays into three bullets so you can prete
 - **Filter before you read** — every capture gets scored and critiqued, so you can recognize AI slop and shallow takes before they cost you twenty minutes.
 - **Deepen what matters** — when something *is* worth reading, the original stays front and center with digest, concepts, hidden assumptions, and shaky claims beside it.
 - **Let the library argue with itself** — new captures are checked against the most relevant sources in your library: what they support, repeat, or **contradict**.
+- **Bilingual reading on demand** — one-click toggle between English and Chinese across the curated feed and reading view with instant browser translation, while strictly preserving original English source links.
 
 Every verdict is advisory. Every analysis is editable. The reader stays human — that's the point, not a limitation.
 

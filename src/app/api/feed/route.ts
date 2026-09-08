@@ -7,18 +7,19 @@ import { AGENT_CONTEXT_CONFIG, DEFAULT_RSS_FEEDS, DEFAULT_SEARCH_SOURCES, FEED_C
 import { FeedCache, FeedSignals, InsightItem } from "@/lib/types";
 
 /**
- * Check if cache is still fresh
+ * Whether the cache has passed the point where its content is likely out of
+ * date. Purely informational now — GET never acts on this by regenerating.
  */
-function isCacheFresh(cache: FeedCache): boolean {
-  const generatedAt = new Date(cache.generatedAt).getTime();
-  const now = Date.now();
-  const cacheAgeHours = (now - generatedAt) / (1000 * 60 * 60);
-  return cacheAgeHours < FEED_CONFIG.cacheHours;
+function isStale(cache: FeedCache): boolean {
+  const cacheAgeHours = (Date.now() - new Date(cache.generatedAt).getTime()) / (1000 * 60 * 60);
+  return cacheAgeHours >= FEED_CONFIG.cacheHours;
 }
 
 /**
  * GET /api/feed
- * Returns cached feed or generates new one
+ * Reads-only: returns whatever is on disk, however old, and never runs the
+ * agent pipeline. Opening the page must never silently cost several minutes —
+ * only POST /api/feed (the explicit Refresh action) regenerates.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -60,20 +61,19 @@ export async function GET(request: NextRequest) {
     const history = await loadFeedHistory();
     const readBriefingTexts = history.readTexts ?? [];
 
-    // Check cache
+    // Serve whatever is on disk. No cache yet just means an empty feed with
+    // a prompt to refresh — it is never a reason to generate one here.
     const cache = await loadFeedCache();
-    if (cache && isCacheFresh(cache)) {
+    if (!cache) {
       return NextResponse.json({
         success: true,
         feed: {
-          items: cache.items,
-          interests: cache.interests,
-          generatedAt: cache.generatedAt,
-          fromCache: true,
-          briefing: cache.briefing,
-          signals: cache.signals,
-          insights: cache.insights,
-          message: cache.message,
+          items: [],
+          interests: [],
+          generatedAt: null,
+          fromCache: false,
+          stale: false,
+          message: "No feed yet — click Refresh to fetch one.",
           starredBriefingTexts,
           readBriefingTexts,
         },
@@ -81,16 +81,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Generate new feed
-    const feedResult = await generateFeed();
-
-    // Re-fetch available dates after generation (new snapshot may have been created)
-    const updatedDates = await listFeedSnapshots();
-
     return NextResponse.json({
       success: true,
-      feed: { ...feedResult, starredBriefingTexts, readBriefingTexts },
-      availableDates: updatedDates,
+      feed: {
+        items: cache.items,
+        interests: cache.interests,
+        generatedAt: cache.generatedAt,
+        fromCache: true,
+        stale: isStale(cache),
+        briefing: cache.briefing,
+        signals: cache.signals,
+        insights: cache.insights,
+        message: cache.message,
+        starredBriefingTexts,
+        readBriefingTexts,
+      },
+      availableDates,
     });
   } catch (error) {
     console.error("[GET /api/feed] Error:", error);

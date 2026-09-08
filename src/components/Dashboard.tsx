@@ -30,6 +30,7 @@ interface FeedProps {
   interests: string[];
   generatedAt: string | null;
   fromCache: boolean;
+  stale: boolean;
   message?: string;
   loading: boolean;
   error: string | null;
@@ -670,6 +671,7 @@ export const Dashboard = React.memo(function Dashboard({
           interests={feed.interests}
           generatedAt={feed.generatedAt}
           fromCache={feed.fromCache}
+          stale={feed.stale}
           message={feed.message}
           loading={feed.loading}
           error={feed.error}

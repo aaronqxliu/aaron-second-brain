@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight,
   Link as LinkIcon,
+  Languages,
 } from "lucide-react";
 import { ActionType, Highlight, ResolvedConnection, ConnectionType, Connection, SourceType, UserHighlight } from "@/lib/types";
 import { SourceError } from "./SourceError";
@@ -23,6 +24,7 @@ import { StarRating } from "./StarRating";
 import { useResizable } from "@/hooks/useResizable";
 import { useReadingProgress } from "@/hooks/useReadingProgress";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
+import { useTranslation } from "@/hooks/useTranslation";
 import { formatRelativeTime } from "@/lib/utils";
 /** Format seconds as M:SS or H:MM:SS */
 function formatTimer(totalSeconds: number): string {
@@ -129,6 +131,7 @@ export const EntryView = React.memo(function EntryView({
 }: EntryViewProps) {
   const hasAnalysis = !!entry.analysis;
   const analysis = entry.analysis;
+  const { lang, toggleLang, t, translateBatch, isTranslating } = useTranslation();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(entry.content);
@@ -137,6 +140,33 @@ export const EntryView = React.memo(function EntryView({
   const [viewOriginal, setViewOriginal] = useState(false);
   const [zoom, setZoom] = useState(100);
   const readingScrollRef = React.useRef<HTMLDivElement>(null);
+
+  // Trigger batch translation when Chinese is selected
+  useEffect(() => {
+    if (lang !== "zh") return;
+    const batch: Record<string, string> = {};
+    if (entry.title) batch["e_title"] = entry.title;
+    if (analysis?.digest?.summary) batch["d_summary"] = analysis.digest.summary;
+    analysis?.digest?.highlights?.forEach((h, idx) => {
+      if (h.text) batch[`h_text_${idx}`] = h.text;
+    });
+    analysis?.digest?.concepts?.forEach((c, idx) => {
+      if (c.term) batch[`c_term_${idx}`] = c.term;
+      if (c.definition) batch[`c_def_${idx}`] = c.definition;
+    });
+    analysis?.critique?.hiddenAssumptions?.forEach((h, idx) => {
+      batch[`cr_ha_${idx}`] = h;
+    });
+    analysis?.critique?.potentialIssues?.forEach((p, idx) => {
+      batch[`cr_pi_${idx}`] = p;
+    });
+    analysis?.critique?.needsVerification?.forEach((v, idx) => {
+      batch[`cr_nv_${idx}`] = v;
+    });
+    if (Object.keys(batch).length > 0) {
+      translateBatch(batch, "zh");
+    }
+  }, [lang, entry.id, entry.title, analysis, translateBatch]);
   const isReadingMode = !isEditing && !viewOriginal && entry.content.trim().length > 0;
   const readingProgress = useReadingProgress(
     readingScrollRef,
@@ -235,9 +265,26 @@ export const EntryView = React.memo(function EntryView({
                 style={{ borderColor: palette[500] }}
               />
             ) : (
-              <h1 className="text-2xl font-semibold leading-tight flex-1 min-w-0">{entry.title}</h1>
+              <h1 className="text-2xl font-semibold leading-tight flex-1 min-w-0">{t(entry.title)}</h1>
             )}
-            <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+            <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+              {!isEditing && (
+                <button
+                  onClick={toggleLang}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                  style={{
+                    borderColor: lang === "zh" ? palette[500] : theme.border,
+                    color: lang === "zh" ? palette[600] : theme.text,
+                    backgroundColor: lang === "zh" ? `${palette[500]}10` : "transparent",
+                  }}
+                  title={lang === "zh" ? "切换为英文 (Switch to English)" : "翻译为中文 (Translate to Chinese)"}
+                  data-track="entry.toggle_lang"
+                >
+                  <Languages className="w-3.5 h-3.5" />
+                  <span>{lang === "zh" ? "中文" : "EN"}</span>
+                  {isTranslating && <Loader2 className="w-3 h-3 animate-spin ml-0.5" />}
+                </button>
+              )}
               {isEditing ? (
                 <>
                   <button
@@ -295,6 +342,14 @@ export const EntryView = React.memo(function EntryView({
               {entry.sourceUrl && entry.createdAt && <span>·</span>}
               {entry.createdAt && (
                 <span>Added {formatRelativeTime(entry.createdAt)}</span>
+              )}
+              {lang === "zh" && entry.title && t(entry.title) !== entry.title && (
+                <>
+                  <span>·</span>
+                  <span className="truncate max-w-md text-xs opacity-75" title={`Original title: ${entry.title}`}>
+                    Original: {entry.title}
+                  </span>
+                </>
               )}
               {entry.content && (() => {
                 const text = entry.content.trim();
@@ -500,13 +555,13 @@ export const EntryView = React.memo(function EntryView({
                   <div className="space-y-4">
                     <div>
                       <h4 className="font-medium text-sm mb-2">Summary</h4>
-                      <p className="text-sm" style={{ color: theme.textMuted }}>{analysis.digest.summary}</p>
+                      <p className="text-sm" style={{ color: theme.textMuted }}>{t(analysis.digest.summary)}</p>
                     </div>
                     {(analysis.digest.highlights?.length ?? 0) > 0 && onReaction && (
-                      <HighlightsSection highlights={analysis.digest.highlights!} onReaction={onReaction} palette={palette} theme={theme} />
+                      <HighlightsSection highlights={analysis.digest.highlights!} onReaction={onReaction} palette={palette} theme={theme} t={t} />
                     )}
                     {(analysis.digest.concepts?.length ?? 0) > 0 && onReaction && (
-                      <ConceptsSection concepts={analysis.digest.concepts} onReaction={onReaction} palette={palette} theme={theme} />
+                      <ConceptsSection concepts={analysis.digest.concepts} onReaction={onReaction} palette={palette} theme={theme} t={t} />
                     )}
                   </div>
                 )}
@@ -518,7 +573,7 @@ export const EntryView = React.memo(function EntryView({
                         <h4 className="font-medium text-sm mb-2">Hidden Assumptions</h4>
                         <ul className="space-y-1.5">
                           {analysis.critique.hiddenAssumptions.map((item, i) => (
-                            <li key={i} className="text-sm" style={{ color: theme.textMuted }}>• {item}</li>
+                            <li key={i} className="text-sm" style={{ color: theme.textMuted }}>• {t(item)}</li>
                           ))}
                         </ul>
                       </div>
@@ -528,7 +583,7 @@ export const EntryView = React.memo(function EntryView({
                         <h4 className="font-medium text-sm mb-2">Potential Issues</h4>
                         <ul className="space-y-1.5">
                           {analysis.critique.potentialIssues.map((item, i) => (
-                            <li key={i} className="text-sm" style={{ color: theme.textMuted }}>• {item}</li>
+                            <li key={i} className="text-sm" style={{ color: theme.textMuted }}>• {t(item)}</li>
                           ))}
                         </ul>
                       </div>
@@ -538,7 +593,7 @@ export const EntryView = React.memo(function EntryView({
                         <h4 className="font-medium text-sm mb-2">Needs Verification</h4>
                         <ul className="space-y-1.5">
                           {analysis.critique.needsVerification.map((item, i) => (
-                            <li key={i} className="text-sm" style={{ color: theme.textMuted }}>• {item}</li>
+                            <li key={i} className="text-sm" style={{ color: theme.textMuted }}>• {t(item)}</li>
                           ))}
                         </ul>
                       </div>
@@ -622,11 +677,13 @@ function HighlightsSection({
   onReaction,
   palette,
   theme,
+  t,
 }: {
   highlights: Highlight[];
   onReaction: (type: "highlight" | "concept", itemId: string, reaction: string) => void;
   palette: Record<number, string>;
   theme: Record<string, string>;
+  t?: (text: string) => string;
 }) {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
@@ -669,7 +726,7 @@ function HighlightsSection({
               className="text-sm pl-3 py-2 border-l-2 transition-opacity flex items-start gap-2"
               style={{ borderColor: typeColors[h.type], color: theme.textMuted, opacity: isDismissed ? 0.4 : 1 }}
             >
-              <div className="flex-1">{h.text}</div>
+              <div className="flex-1">{t ? t(h.text) : h.text}</div>
               <div className="flex gap-1 flex-shrink-0">
                 <button
                   onClick={() => onReaction("highlight", h.id, isStarred ? "" : "star")}
@@ -708,11 +765,13 @@ function ConceptsSection({
   onReaction,
   palette,
   theme,
+  t,
 }: {
   concepts: { id: string; term: string; definition: string; status?: "knew" | "learned" }[];
   onReaction: (type: "highlight" | "concept", itemId: string, reaction: string) => void;
   palette: Record<number, string>;
   theme: Record<string, string>;
+  t?: (text: string) => string;
 }) {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
@@ -743,7 +802,7 @@ function ConceptsSection({
               style={{ backgroundColor: theme.borderLight, opacity: (c.status === "knew" || c.status === "learned") ? 0.5 : 1 }}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-medium text-sm">{c.term}</span>
+                <span className="font-medium text-sm">{t ? t(c.term) : c.term}</span>
                 <div className="flex gap-1">
                   <button
                     onClick={() => onReaction("concept", c.id, "knew")}
@@ -775,7 +834,7 @@ function ConceptsSection({
                   </button>
                 </div>
               </div>
-              <div className="text-sm" style={{ color: theme.textMuted }}>{c.definition}</div>
+              <div className="text-sm" style={{ color: theme.textMuted }}>{t ? t(c.definition) : c.definition}</div>
             </div>
           );
         })}

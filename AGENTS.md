@@ -226,3 +226,6 @@ Do not write full agent prompts/responses to disk during normal use. Enable `SEC
 
 ### Sample Data Seeds Automatically (2026-06-18)
 First-run sample data is a product behavior, not an onboarding command. `sample_data/` should auto-copy only into an empty user data root and must never overwrite existing user files. Seeded agent instructions should use `AGENTS.md` as canonical, with `CLAUDE.md` as a symlink for compatibility.
+
+### Translation: Browser-Direct Web API with Local Agent Fallback (2026-09-08)
+When adding utility features like translation, avoid routing all small text operations through the heavy Agent CLI subprocess, which takes 2-4 seconds and burns agent quota. Google Translate's Web API carries `access-control-allow-origin: *` and can be invoked directly from the browser in 50-150ms at zero token cost, with the Agent CLI retained as a resilient fallback for restricted networks.

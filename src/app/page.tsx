@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { BookOpen, Eye, SkipForward, Target } from "lucide-react";
 import { SourceSummary, ActionType, ACTION_CONFIG, UserHighlight } from "@/lib/types";
@@ -198,7 +198,6 @@ function HomeContent() {
     handleRemoveHighlight,
     reanalyzingIds,
     navigateToSource,
-    navigateToDashboard,
   } = useSourceActions({
     onUpsertSourceSummary: upsertLibrarySummary,
     onRemoveSourceSummary: removeLibrarySummary,
@@ -221,12 +220,22 @@ function HomeContent() {
     }
   };
 
-  // Load feed when viewing For You
+  // Load feed once on first visit only if no cached feed data exists in memory or storage.
+  // Returning to For You preserves the exact last-rendered state without auto-reloading;
+  // only the explicit Refresh button (POST) should ever trigger a refresh.
+  const hasLoadedFeedOnceRef = useRef(false);
   useEffect(() => {
-    if (!sourceId && currentView === "foryou") {
+    if (
+      !sourceId &&
+      currentView === "foryou" &&
+      !hasLoadedFeedOnceRef.current &&
+      feed.items.length === 0 &&
+      !feed.generatedAt
+    ) {
+      hasLoadedFeedOnceRef.current = true;
       feed.loadFeed();
     }
-  }, [sourceId, currentView]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sourceId, currentView, feed.items.length, feed.generatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load history when viewing History
   useEffect(() => {
@@ -531,10 +540,10 @@ function HomeContent() {
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           selectedSource={entry.source}
           currentView={currentView}
-          onNavigateToDashboard={() => { setProfileDoc(null); navigateToDashboard(); navigateToView("dashboard"); }}
-          onNavigateToForYou={() => { setProfileDoc(null); navigateToDashboard(); navigateToView("foryou"); }}
-          onNavigateToHistory={() => { setProfileDoc(null); navigateToDashboard(); navigateToView("history"); }}
-          onNavigateToRadar={() => { setProfileDoc(null); navigateToDashboard(); navigateToView("radar"); }}
+          onNavigateToDashboard={() => { setProfileDoc(null); entry.setSource(null); entry.setDocument(null); navigateToView("dashboard"); }}
+          onNavigateToForYou={() => { setProfileDoc(null); entry.setSource(null); entry.setDocument(null); navigateToView("foryou"); }}
+          onNavigateToHistory={() => { setProfileDoc(null); entry.setSource(null); entry.setDocument(null); navigateToView("history"); }}
+          onNavigateToRadar={() => { setProfileDoc(null); entry.setSource(null); entry.setDocument(null); navigateToView("radar"); }}
           selectedProfile={profileParam}
           onSelectProfile={navigateToProfile}
           onEntryContextMenu={handleEntryContextMenu}
@@ -741,6 +750,7 @@ function HomeContent() {
                   interests={feed.interests}
                   generatedAt={feed.generatedAt}
                   fromCache={feed.fromCache}
+                  stale={feed.stale}
                   message={feed.message}
                   briefing={feed.briefing}
                   signals={feed.signals}

@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Rss, RefreshCw, Sparkles, ChevronDown, ChevronUp, X, ExternalLink, Plus, Filter, Check, Star } from "lucide-react";
+import { Rss, RefreshCw, Sparkles, ChevronDown, ChevronUp, X, ExternalLink, Plus, Filter, Check, Star, Languages, Loader2 } from "lucide-react";
 import { FeedItem, FeedSignals, InsightItem, StructuredBriefing as StructuredBriefingType } from "@/lib/types";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime, formatExactTime } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface FeedSectionProps {
   items: FeedItem[];
   interests: string[];
   generatedAt: string | null;
   fromCache: boolean;
+  stale: boolean;
   message?: string;
   briefing?: StructuredBriefingType;
   signals?: FeedSignals;
@@ -39,7 +41,7 @@ export const FeedSection = React.memo(function FeedSection({
   items,
   interests,
   generatedAt,
-  fromCache,
+  stale,
   message,
   briefing,
   signals,
@@ -64,7 +66,46 @@ export const FeedSection = React.memo(function FeedSection({
   palette,
   theme,
 }: FeedSectionProps) {
+  const { lang, toggleLang, t, translateBatch, isTranslating } = useTranslation();
   const [showFiltered, setShowFiltered] = useState(false);
+
+  // Trigger batch translation when Chinese is selected
+  useEffect(() => {
+    if (lang !== "zh" || loading) return;
+    const batch: Record<string, string> = {};
+
+    if (briefing?.news) {
+      briefing.news.forEach((n, idx) => {
+        if (n.text) batch[`bn_${idx}`] = n.text;
+      });
+    }
+    if (briefing?.goDeeper) {
+      briefing.goDeeper.forEach((g, idx) => {
+        if (g.reason) batch[`bg_${idx}`] = g.reason;
+      });
+    }
+    if (briefing?.frontier) {
+      briefing.frontier.forEach((f, idx) => {
+        if (f.claim) batch[`fc_${idx}`] = f.claim;
+        if (f.whyUnnoticed) batch[`fu_${idx}`] = f.whyUnnoticed;
+      });
+    }
+    if (insights) {
+      insights.forEach((ins, idx) => {
+        if (ins.text) batch[`ins_${idx}`] = ins.text;
+      });
+    }
+    items.forEach((it) => {
+      if (it.title) batch[`t_${it.id}`] = it.title;
+      if (it.scoring.whyRead) batch[`wr_${it.id}`] = it.scoring.whyRead;
+      if (it.scoring.connectsTo) batch[`ct_${it.id}`] = it.scoring.connectsTo;
+      if (it.scoring.whySkip) batch[`ws_${it.id}`] = it.scoring.whySkip;
+    });
+
+    if (Object.keys(batch).length > 0) {
+      translateBatch(batch, "zh");
+    }
+  }, [lang, loading, briefing, insights, items, translateBatch]);
 
   // Separate items into recommended and filtered
   const recommendedItems = items.filter(item => item.scoring.action === "recommend");
@@ -82,23 +123,63 @@ export const FeedSection = React.memo(function FeedSection({
         </div>
 
         <div className="flex items-center gap-3">
-          {generatedAt && (
-            <span className="text-xs" style={{ color: theme.textMuted }}>
-              {fromCache ? "Cached" : "Updated"} {formatRelativeTime(generatedAt)}
-            </span>
-          )}
+          {/* Language Toggle: English <-> Chinese */}
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+            style={{
+              borderColor: lang === "zh" ? palette[500] : theme.border,
+              color: lang === "zh" ? palette[600] : theme.text,
+              backgroundColor: lang === "zh" ? `${palette[500]}10` : "transparent",
+            }}
+            title={lang === "zh" ? "当前为中文展示，点击切换为英文 (Switch to English)" : "翻译为中文 (Translate to Chinese)"}
+            data-track="feed.toggle_lang"
+          >
+            <Languages className="w-3.5 h-3.5" />
+            <span>{lang === "zh" ? "中文" : "EN"}</span>
+            {isTranslating && <Loader2 className="w-3 h-3 animate-spin ml-0.5" />}
+          </button>
+
+          <span
+            className="flex items-center gap-1.5 text-xs select-none"
+            style={{ color: theme.textMuted }}
+            title={generatedAt ? new Date(generatedAt).toLocaleString() : undefined}
+          >
+            {generatedAt ? (
+              <>
+                <span
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: stale ? "#f59e0b" : "#10b981" }}
+                  title={stale ? "This feed is more than a few hours old" : "Feed is up to date"}
+                />
+                <span>
+                  Last refreshed {formatRelativeTime(generatedAt)}
+                  {formatExactTime(generatedAt) ? ` (${formatExactTime(generatedAt)})` : ""}
+                </span>
+                {stale && (
+                  <span
+                    className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                    style={{ backgroundColor: "rgba(245, 158, 11, 0.12)", color: "#d97706" }}
+                  >
+                    Outdated
+                  </span>
+                )}
+              </>
+            ) : (
+              "Never refreshed"
+            )}
+          </span>
           {!selectedDate && (
             <button
               onClick={onRefresh}
               disabled={loading}
-              className="p-2 rounded-lg hover:bg-black/5 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50 hover:bg-black/5 dark:hover:bg-white/5"
+              style={{ borderColor: theme.border, color: theme.text }}
               data-track="feed.refresh"
-              title="Refresh feed"
+              title="Fetch the latest from all sources"
             >
-              <RefreshCw
-                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-                style={{ color: theme.textMuted }}
-              />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
             </button>
           )}
         </div>
@@ -170,13 +251,13 @@ export const FeedSection = React.memo(function FeedSection({
           className="p-4 rounded-xl mb-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-zinc-900 dark:to-zinc-800 border"
           style={{ borderColor: theme.border }}
         >
-          <StructuredBriefing briefing={briefing} items={items} generatedAt={generatedAt} palette={palette} theme={theme} onAddContext={onAddContext} onMarkBriefingRead={onMarkBriefingRead} onMarkBriefingUnread={onMarkBriefingUnread} onStarBriefing={onStarBriefing} onUnstarBriefing={onUnstarBriefing} starredBriefingTexts={starredBriefingTexts} readBriefingTexts={readBriefingTexts} />
+          <StructuredBriefing briefing={briefing} items={items} generatedAt={generatedAt} palette={palette} theme={theme} onAddContext={onAddContext} onMarkBriefingRead={onMarkBriefingRead} onMarkBriefingUnread={onMarkBriefingUnread} onStarBriefing={onStarBriefing} onUnstarBriefing={onUnstarBriefing} starredBriefingTexts={starredBriefingTexts} readBriefingTexts={readBriefingTexts} t={t} />
         </div>
       )}
 
       {/* Insights */}
       {insights && insights.length > 0 && !loading && (
-        <InsightsSection insights={insights} palette={palette} theme={theme} onAddContext={onAddContext} />
+        <InsightsSection insights={insights} palette={palette} theme={theme} onAddContext={onAddContext} t={t} />
       )}
 
       {/* Message (empty state or degraded mode) */}
@@ -250,6 +331,7 @@ export const FeedSection = React.memo(function FeedSection({
                 onDismiss={onDismiss}
                 formatRelativeTime={formatRelativeTime}
                 theme={theme}
+                t={t}
               />
             );
           })}
@@ -279,13 +361,19 @@ export const FeedSection = React.memo(function FeedSection({
                     rel="noopener noreferrer"
                     className="text-sm font-medium hover:underline line-clamp-1"
                     style={{ color: theme.textMuted }}
+                    title={item.title}
                   >
-                    {item.title}
+                    {t(item.title)}
                   </a>
                   {item.scoring.whySkip && (
                     <p className="text-xs mt-0.5" style={{ color: theme.textMuted }}>
-                      {item.scoring.whySkip}
+                      {t(item.scoring.whySkip)}
                     </p>
+                  )}
+                  {lang === "zh" && (
+                    <div className="text-[11px] mt-1 truncate" style={{ color: theme.textMuted }}>
+                      Original: {item.title}
+                    </div>
                   )}
                 </div>
                 <span className="text-xs shrink-0" style={{ color: theme.textMuted }}>
@@ -580,15 +668,17 @@ function InsightsSection({
   palette,
   theme,
   onAddContext,
+  t,
 }: {
   insights: InsightItem[];
   palette: Record<number, string>;
   theme: Record<string, string>;
   onAddContext?: (text: string, title: string) => void;
+  t?: (text: string) => string;
 }) {
   const [expanded, setExpanded] = useState(true);
 
-  const plainText = insights.map(i => i.text.replace(/\*\*([^*]+)\*\*/g, "$1")).join("\n");
+  const plainText = insights.map(i => (t ? t(i.text) : i.text).replace(/\*\*([^*]+)\*\*/g, "$1")).join("\n");
 
   return (
     <div
@@ -644,7 +734,7 @@ function InsightsSection({
                 <div className="h-px mx-2 my-1" style={{ backgroundColor: theme.border }} />
               )}
               <p className="text-sm leading-relaxed py-2.5 px-2" style={{ color: theme.text }}>
-                <TextWithBold text={insight.text} palette={palette} highlight />
+                <TextWithBold text={t ? t(insight.text) : insight.text} palette={palette} highlight />
               </p>
             </div>
           ))}
@@ -670,6 +760,7 @@ function StructuredBriefing({
   onUnstarBriefing,
   starredBriefingTexts,
   readBriefingTexts,
+  t,
 }: {
   briefing: StructuredBriefingType;
   items: FeedItem[];
@@ -683,6 +774,7 @@ function StructuredBriefing({
   onUnstarBriefing?: (text: string) => void;
   starredBriefingTexts?: Set<string>;
   readBriefingTexts?: Set<string>;
+  t?: (text: string) => string;
 }) {
   const scrollToRef = (num: number) => {
     const el = document.getElementById(`feed-item-${num}`);
@@ -719,7 +811,7 @@ function StructuredBriefing({
     }
   };
 
-  const plainText = briefing.news.map(n => n.text.replace(/\*\*([^*]+)\*\*/g, "$1")).join("\n");
+  const plainText = briefing.news.map(n => (t ? t(n.text) : n.text).replace(/\*\*([^*]+)\*\*/g, "$1")).join("\n");
 
   return (
     <div className="space-y-4 group/briefing">
@@ -749,9 +841,9 @@ function StructuredBriefing({
                 #{item.ref}
               </button>
               <div>
-                <div style={{ color: theme.text }}>{item.claim}</div>
+                <div style={{ color: theme.text }}>{t ? t(item.claim) : item.claim}</div>
                 <div className="text-xs mt-0.5" style={{ color: theme.textMuted }}>
-                  {item.whyUnnoticed}
+                  {t ? t(item.whyUnnoticed) : item.whyUnnoticed}
                 </div>
               </div>
             </div>
@@ -829,7 +921,7 @@ function StructuredBriefing({
                     #{ref}
                   </button>
                 ))}
-                <TextWithBold text={newsItem.text || ""} palette={palette} />
+                <TextWithBold text={t ? t(newsItem.text || "") : (newsItem.text || "")} palette={palette} />
               </p>
 
               {/* Check — right side */}
@@ -865,7 +957,7 @@ function StructuredBriefing({
                 >
                   #{item.ref}
                 </button>
-                <span style={{ color: theme.textMuted }}>{item.reason}</span>
+                <span style={{ color: theme.textMuted }}>{t ? t(item.reason) : item.reason}</span>
               </div>
             ))}
           </div>
@@ -925,6 +1017,7 @@ function FeedCard({
   onDismiss,
   formatRelativeTime,
   theme,
+  t,
 }: {
   item: FeedItem;
   index: number;
@@ -932,6 +1025,7 @@ function FeedCard({
   onDismiss: (id: string) => void;
   formatRelativeTime: (date: string) => string;
   theme: Record<string, string>;
+  t?: (text: string) => string;
 }) {
   const [imgError, setImgError] = useState(false);
   const [hovering, setHovering] = useState(false);
@@ -1039,7 +1133,7 @@ function FeedCard({
           className="text-sm font-medium leading-snug line-clamp-2 mb-1 group-hover:underline"
           style={{ color: theme.text }}
         >
-          {item.title}
+          {t ? t(item.title) : item.title}
         </h3>
 
         {/* Source + Time + Category */}
@@ -1063,7 +1157,7 @@ function FeedCard({
             className="mt-2 text-xs leading-relaxed"
             style={{ color: theme.textMuted }}
           >
-            {item.scoring.whyRead}
+            {t ? t(item.scoring.whyRead) : item.scoring.whyRead}
           </p>
         )}
         {/* Connects to existing library item */}
@@ -1073,9 +1167,26 @@ function FeedCard({
             style={{ backgroundColor: `${accentColor}10`, color: accentColor }}
           >
             <span className="opacity-70 flex-shrink-0">Related:</span>
-            <span className="font-medium">{item.scoring.connectsTo}</span>
+            <span className="font-medium">{t ? t(item.scoring.connectsTo) : item.scoring.connectsTo}</span>
           </div>
         )}
+
+        {/* Bottom original source link - ALWAYS preserves original English text */}
+        <div
+          className="mt-3 pt-2 border-t flex items-center justify-between text-[11px]"
+          style={{ borderColor: theme.border }}
+        >
+          <span
+            className="flex items-center gap-1 min-w-0 max-w-full truncate hover:underline font-normal"
+            style={{ color: theme.textMuted }}
+            title={`Original source: ${item.title} (${item.source})`}
+          >
+            <ExternalLink className="w-3 h-3 shrink-0" />
+            <span className="truncate">
+              Source: {item.title}
+            </span>
+          </span>
+        </div>
       </a>
     </div>
   );
